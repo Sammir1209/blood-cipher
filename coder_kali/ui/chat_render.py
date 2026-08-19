@@ -113,14 +113,25 @@ def render_execution_result(result, command: Optional[str] = None):
     title = f"[bold green]✓ SALIDA DEL SISTEMA (Código {result.returncode})[/bold green]" if result.success else f"[bold red]✗ ERROR DE EJECUCIÓN (Código {result.returncode})[/bold red]"
     border_color = "bright_green" if result.success else "bright_red"
 
-    # Si la salida es muy larga, darle formato limpio
+    # Si la salida es muy larga o tiene líneas minificadas gigantes, darle formato limpio y seguro
     output_text = result.output
-    if len(output_text.splitlines()) > 50:
-        lines = output_text.splitlines()
-        preview = "\n".join(lines[:30]) + f"\n\n... [{len(lines) - 40} líneas omitidas] ...\n\n" + "\n".join(lines[-10:])
+    lines = output_text.splitlines()
+
+    # Si hay líneas larguísimas (ej. JS minificado), truncar las líneas individuales
+    safe_lines = []
+    for l in lines[:60]:
+        if len(l) > 300:
+            safe_lines.append(l[:297] + "...")
+        else:
+            safe_lines.append(l)
+
+    if len(lines) > 50:
+        preview = "\n".join(safe_lines[:30]) + f"\n\n... [{len(lines) - 40} líneas omitidas para agilizar visualización] ...\n\n" + "\n".join([l[:300] for l in lines[-10:]])
         display_content = preview
+    elif len(output_text) > 5000:
+        display_content = "\n".join(safe_lines[:30]) + f"\n\n... [Salida extensa: {len(output_text)} caracteres] ...\n"
     else:
-        display_content = output_text
+        display_content = "\n".join(safe_lines)
 
     panel = Panel(
         Text(display_content, style="white on black" if not result.success else "white"),

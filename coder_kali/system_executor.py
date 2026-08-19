@@ -207,9 +207,19 @@ class SystemExecutor:
 
             child.close()
             full_output = "".join(output_chunks).strip()
+            if not full_output:
+                full_output = "[Comando ejecutado sin salida estándar]"
+            elif len(full_output) > 20000:
+                total_len = len(full_output)
+                full_output = (
+                    full_output[:10000]
+                    + f"\n\n... [Salida muy extensa: {total_len} caracteres detectados. Truncado para preservar contexto de IA] ...\n\n"
+                    + full_output[-5000:]
+                )
+
             return ExecutionResult(
                 success=child.exitstatus == 0,
-                output=full_output if full_output else "[Comando ejecutado sin salida estándar]",
+                output=full_output,
                 returncode=child.exitstatus or 0,
                 command=cmd,
             )
@@ -246,9 +256,19 @@ class SystemExecutor:
             if stderr:
                 combined_output.append(f"[STDERR]\n{stderr.strip()}")
 
-            final_output = "\n".join(combined_output)
+            final_output = "\n".join(combined_output).strip()
             if not final_output:
                 final_output = "[Comando ejecutado con éxito (código de salida 0), sin salida estándar]"
+
+            # Truncar salidas gigantes (ej. bundles JS minificados)
+            max_chars = 20000
+            if len(final_output) > max_chars:
+                total_len = len(final_output)
+                final_output = (
+                    final_output[:10000]
+                    + f"\n\n... [Salida muy extensa: {total_len} caracteres detectados. Truncado para preservar contexto de IA] ...\n\n"
+                    + final_output[-5000:]
+                )
 
             return ExecutionResult(
                 success=process.returncode == 0,
