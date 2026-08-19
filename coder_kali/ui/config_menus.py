@@ -1,8 +1,6 @@
-"""
-coder_kali/ui/config_menus.py - Menús interactivos con Questionary.
-Permite configurar el proveedor de IA, modelo, API Key y probar conectividad.
-"""
-
+import os
+import sys
+from typing import Optional, List, Dict, Any
 import questionary
 from rich.console import Console
 from rich.panel import Panel

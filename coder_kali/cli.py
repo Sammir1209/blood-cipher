@@ -6,6 +6,7 @@ Punto de entrada de la aplicación para chat interactivo, configuración, ejecuc
 import os
 import sys
 import shutil
+from typing import Optional, List, Dict, Any
 import typer
 from rich.console import Console
 from rich.prompt import Prompt
