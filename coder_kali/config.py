@@ -321,20 +321,27 @@ class ConfigManager:
     def set_api_key(self, provider: str, raw_key: str):
         if "api_keys" not in self.config:
             self.config["api_keys"] = {}
-        self.config["api_keys"][provider] = self._encrypt(raw_key.strip())
+        clean_key = raw_key.strip()
+        self.config["api_keys"][provider] = self._encrypt(clean_key)
         self.save()
+        env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
+        if env_var and clean_key:
+            os.environ[env_var] = clean_key
 
     def get_api_key(self, provider: Optional[str] = None) -> str:
         prov = provider or self.config.get("provider", "gemini")
-        # Primero revisar variable de entorno
-        env_var = DEFAULT_PROVIDERS.get(prov, {}).get("env_var")
-        if env_var and os.environ.get(env_var):
-            return os.environ[env_var]
-
-        # Luego revisar config guardada
+        # 1. Priorizar clave guardada explícitamente por el usuario
         encrypted_key = self.config.get("api_keys", {}).get(prov, "")
         if encrypted_key:
-            return self._decrypt(encrypted_key)
+            key = self._decrypt(encrypted_key)
+            if key and len(key.strip()) > 3:
+                return key.strip()
+
+        # 2. Revisar variable de entorno si no está en config
+        env_var = DEFAULT_PROVIDERS.get(prov, {}).get("env_var")
+        if env_var and os.environ.get(env_var):
+            return os.environ[env_var].strip()
+
         return ""
 
     def set_provider(self, provider: str, model: Optional[str] = None):

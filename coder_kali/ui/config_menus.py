@@ -141,16 +141,21 @@ def test_provider_connection(config_mgr: ConfigManager) -> bool:
     api_key = config_mgr.get_api_key(provider)
     api_base = config_mgr.get_api_base(provider)
 
+    # Sincronizar variable de entorno para librerías subyacentes
+    env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
+    if env_var and api_key:
+        os.environ[env_var] = api_key.strip()
+
     console.print()
     with console.status(f"[bold cyan]Probando comunicación con {model}...[/bold cyan]", spinner="dots"):
         try:
             kwargs = {
                 "model": model,
                 "messages": [{"role": "user", "content": "Responde únicamente 'OK'"}],
-                "max_tokens": 10,
+                "max_tokens": 50,
             }
             if api_key:
-                kwargs["api_key"] = api_key
+                kwargs["api_key"] = api_key.strip()
             if api_base:
                 kwargs["api_base"] = api_base
 

@@ -49,6 +49,12 @@ class KaliAgent:
         api_key = self.config_mgr.get_api_key(provider)
         api_base = self.config_mgr.get_api_base(provider)
 
+        # Sincronizar variable de entorno para librerías subyacentes
+        from coder_kali.config import DEFAULT_PROVIDERS
+        env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
+        if env_var and api_key:
+            os.environ[env_var] = api_key.strip()
+
         kwargs: Dict[str, Any] = {
             "model": model,
             "messages": self.messages,
@@ -57,7 +63,7 @@ class KaliAgent:
         }
 
         if api_key:
-            kwargs["api_key"] = api_key
+            kwargs["api_key"] = api_key.strip()
         if api_base:
             kwargs["api_base"] = api_base
 
