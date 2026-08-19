@@ -89,22 +89,48 @@ class KaliAgent:
         while iterations < self.max_tool_iterations:
             iterations += 1
 
-            # 1. Llamar al modelo con LiteLLM
-            with console.status("[bold cyan]Coder-Kali está pensando...[/bold cyan]", spinner="dots"):
-                try:
-                    import litellm
-                    litellm.suppress_debug_info = True
-                    kwargs = self._prepare_call_kwargs()
-                    response = litellm.completion(**kwargs)
-                    choice = response.choices[0]
-                    ai_content = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
-                except ImportError:
-                    err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"
-                    render_error("Dependencia faltante", err_msg)
-                    return f"Error: {err_msg}"
-                except Exception as e:
-                    render_error("Error al comunicarse con el proveedor de IA", str(e))
-                    return f"Error: {str(e)}"
+            # 1. Llamar al modelo con LiteLLM con reintentos automáticos en caso de Rate Limit
+            ai_content = ""
+            max_retries = 3
+            retry_count = 0
+
+            while retry_count < max_retries:
+                with console.status("[bold cyan]Coder-Kali está pensando...[/bold cyan]", spinner="dots"):
+                    try:
+                        import litellm
+                        import time
+                        litellm.suppress_debug_info = True
+                        kwargs = self._prepare_call_kwargs()
+                        response = litellm.completion(**kwargs)
+                        choice = response.choices[0]
+                        ai_content = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                        break
+                    except ImportError:
+                        err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"
+                        render_error("Dependencia faltante", err_msg)
+                        return f"Error: {err_msg}"
+                    except Exception as e:
+                        err_str = str(e)
+                        # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/OpenAI)
+                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                wait_seconds = 12
+                                # Intentar extraer el tiempo exacto si viene en el mensaje de error
+                                import re
+                                match = re.search(r"try again in (\d+(?:\.\d+)?)s", err_str, re.IGNORECASE)
+                                if match:
+                                    wait_seconds = int(float(match.group(1))) + 2
+
+                                console.print(f"[yellow][!] Límite de tokens por minuto alcanzado. Reintentando automáticamente en {wait_seconds}s ({retry_count}/{max_retries})...[/yellow]")
+                                time.sleep(wait_seconds)
+                                continue
+                        
+                        render_error("Error al comunicarse con el proveedor de IA", err_str)
+                        return f"Error: {err_str}"
+
+            if not ai_content:
+                return "No se pudo obtener respuesta del modelo debido a límites de la API."
 
             # 2. Renderizar la respuesta del modelo
             render_ai_message(ai_content)
