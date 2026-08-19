@@ -300,6 +300,62 @@ def sync_tools(
         db.scrape_blackarch_org(limit=limit, verbose=True)
 
 
+@app.command(name="update", help="🔄 Actualiza Coder-Kali a la última versión disponible desde GitHub.")
+def update():
+    """Descarga e instala la versión más reciente de Coder-Kali desde el repositorio oficial."""
+    import subprocess
+    from pathlib import Path
+
+    console.print()
+    console.print(Panel("[bold cyan]Buscando actualizaciones de Coder-Kali en GitHub...[/bold cyan]", border_style="cyan"))
+
+    repo_dir = Path(__file__).resolve().parent.parent
+    git_dir = repo_dir / ".git"
+
+    if not git_dir.exists():
+        console.print(f"[yellow][!] El directorio {repo_dir} no es un repositorio Git válido.[/yellow]")
+        console.print("[dim]Puedes reinstalar con: git clone https://github.com/Sammir1209/coder-kali.git && bash install.sh[/dim]")
+        return
+
+    try:
+        # 1. git pull
+        with console.status("[bold green]Descargando cambios desde origin/main...[/bold green]", spinner="dots"):
+            pull_res = subprocess.run(
+                ["git", "pull", "origin", "main"],
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+        output_str = pull_res.stdout.strip()
+        if "Already up to date" in output_str or "Ya está actualizado" in output_str:
+            console.print("[bold green][✓] Coder-Kali ya está en la versión más reciente.[/bold green]")
+        else:
+            console.print("[bold green][✓] ¡Actualización descargada exitosamente![/bold green]")
+            console.print(f"[dim]{output_str}[/dim]")
+
+            # 2. Actualizar dependencias si es un entorno virtual
+            venv_pip = Path.home() / ".local" / "share" / "coder-kali" / "env" / "bin" / "pip"
+            if venv_pip.exists():
+                with console.status("[bold cyan]Actualizando dependencias del entorno virtual...[/bold cyan]", spinner="dots"):
+                    subprocess.run(
+                        [str(venv_pip), "install", "-r", str(repo_dir / "requirements.txt"), "--upgrade"],
+                        capture_output=True,
+                    )
+                    subprocess.run(
+                        [str(venv_pip), "install", "-e", str(repo_dir), "--no-deps"],
+                        capture_output=True,
+                    )
+
+            console.print("[bold bright_green]🚀 ¡Coder-Kali se ha actualizado correctamente![/bold bright_green]")
+
+    except subprocess.CalledProcessError as e:
+        console.print(f"[bold red][!] Error al actualizar desde Git: {e.stderr.strip()}[/bold red]")
+    except Exception as ex:
+        console.print(f"[bold red][!] Error inesperado durante la actualización: {ex}[/bold red]")
+
+
 @app.command(name="reset", help="Restaura la configuración a los valores de fábrica.")
 def reset():
     """Restablece la configuración."""

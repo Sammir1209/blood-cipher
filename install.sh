@@ -109,19 +109,39 @@ else
     fi
 fi
 
-echo ""
-echo -e "${GREEN}${BOLD}======================================================${NC}"
-echo -e "${GREEN}${BOLD}   ¡CODER-KALI SE INSTALÓ CON ÉXITO!   ${NC}"
-echo -e "${GREEN}${BOLD}======================================================${NC}"
+# 7. Limpiar la terminal y mostrar la CLI de bienvenida impecable
+clear
+
+echo -e "${CYAN}${BOLD}"
+cat << "EOF"
+  ____          _             _  __     _ _ 
+ / ___|___   __| | ___ _ __  | |/ /__ _| (_)
+| |   / _ \ / _` |/ _ \ '__| | ' // _` | | |
+| |__| (_) | (_| |  __/ |    | . \ (_| | | |
+ \____\___/ \__,_|\___|_|    |_|\_\__,_|_|_|
+   [ Agente de IA para Ciberseguridad & DevOps ]
+   [ Kali Linux | Arch Linux | BlackArch | Debian ]
+EOF
+echo -e "${NC}"
+
+echo -e "${GREEN}${BOLD}================================================================${NC}"
+echo -e "${GREEN}${BOLD}   ✓ ¡CODER-KALI SE INSTALÓ CON ÉXITO EN TU SISTEMA!   ${NC}"
+echo -e "${GREEN}${BOLD}================================================================${NC}"
 echo -e "${CYAN}Ejecutable vinculado en:${NC} ${BOLD}$LINK_PATH${NC}"
 echo ""
-echo -e "${BOLD}Primeros pasos:${NC}"
-echo -e "  1. Configura tu modelo y API Key:"
-echo -e "     ${YELLOW}coder-kali config${NC}"
+echo -e "${BOLD}${YELLOW}🚀 COMANDOS PRINCIPALES PARA EMPEZAR:${NC}"
+echo -e "  ${GREEN}coder-kali${NC}               ➔ Inicia el agente en modo interactivo"
+echo -e "  ${GREEN}coder-kali config${NC}        ➔ Configura tu modelo y API Key (Gemini, Claude, GPT, Ollama)"
+echo -e "  ${GREEN}coder-kali doctor${NC}        ➔ Diagnóstico de herramientas de pentesting instaladas"
+echo -e "  ${GREEN}coder-kali tools list${NC}    ➔ Explora el catálogo de herramientas de Kali & Arch"
 echo ""
-echo -e "  2. Inicia el agente interactivo:"
-echo -e "     ${YELLOW}coder-kali chat${NC}   (o simplemente ${YELLOW}coder-kali${NC})"
+echo -e "${BOLD}${CYAN}🔄 ACTUALIZACIONES:${NC}"
+echo -e "  ${YELLOW}coder-kali update${NC}        ➔ Descarga e instala automáticamente las últimas novedades"
+echo -e "  ${YELLOW}coder-kali tools sync${NC}    ➔ Actualiza la base de datos de kali.org y blackarch.org"
 echo ""
-echo -e "  3. Ejecuta una orden directa en una línea:"
-echo -e "     ${YELLOW}coder-kali run \"analiza los puertos abiertos en localhost y sugiere remediaciones\"${NC}"
-echo ""
+echo -e "${BOLD}¿Quieres iniciar la configuración interactiva ahora mismo? (S/n):${NC} "
+read -r -t 15 launch_choice || launch_choice="s"
+
+if [[ "$launch_choice" =~ ^[SsYy]$ ]] || [[ -z "$launch_choice" ]]; then
+    exec "$LINK_PATH" config
+fi
