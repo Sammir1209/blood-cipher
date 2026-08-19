@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Kali-red.svg)](https://www.kali.org/)
+[![Platform](https://img.shields.io/badge/platform-Kali%20Linux%20%7C%20Arch%20Linux%20%7C%20BlackArch-1793d1.svg)](https://blackarch.org/)
 [![LiteLLM](https://img.shields.io/badge/Multi--LLM-LiteLLM-purple.svg)](https://litellm.ai/)
 
-**Coder-Kali** es un agente de Inteligencia Artificial autónomo y supervisado diseñado específicamente para entornos Linux (Kali Linux, Debian, Ubuntu, Arch), enfocado en **ciberseguridad, hacking ético, auditoría de código, pentesting y administración de sistemas**.
+**Coder-Kali** es un agente de Inteligencia Artificial autónomo y supervisado diseñado específicamente para entornos **Linux de Ciberseguridad** (**Kali Linux, Arch Linux, BlackArch Linux, Debian y Ubuntu**), enfocado en **ciberseguridad, hacking ético, auditoría de código, pentesting y administración de sistemas**.
 
 Integra modelos de lenguaje de vanguardia (**Google Gemini, OpenAI, Claude 3.5 Sonnet, DeepSeek R1, Groq, Ollama**) con una terminal interactiva nativa protegida por **PTY** y confirmación explícita del operador humano.
 

@@ -147,7 +147,7 @@ def doctor():
     os_name = platform.system()
     py_ver = sys.version.split()[0]
 
-    # Verificar herramientas comunes de Kali / Pentesting
+    # Verificar herramientas comunes de Kali / Pentesting / Arch
     tools = [
         "nmap",
         "nikto",
@@ -159,9 +159,14 @@ def doctor():
         "msfconsole",
         "john",
         "aircrack-ng",
+        "ffuf",
         "curl",
         "docker",
         "git",
+        "pacman",
+        "yay",
+        "paru",
+        "apt",
     ]
 
     tools_status = {}
@@ -275,16 +280,24 @@ def info_tool(
         console.print(table)
 
 
-@tools_app.command(name="sync", help="Descarga y actualiza todas las herramientas directamente desde https://www.kali.org/tools/.")
+@tools_app.command(name="sync", help="Descarga y actualiza herramientas desde https://www.kali.org/tools/ y/o https://blackarch.org/tools.html.")
 def sync_tools(
+    source: str = typer.Option("all", "--source", "-s", help="Fuente a scrapear: 'kali', 'blackarch' o 'all' (ambas)"),
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limitar cantidad de herramientas a scrapear (útil para pruebas rápidas)")
 ):
-    """Ejecuta el scraper en vivo contra kali.org/tools/."""
+    """Ejecuta el scraper en vivo contra los repositorios de Kali Linux y BlackArch Linux."""
     from coder_kali.tools_database import KaliToolsDatabase
 
     db = KaliToolsDatabase()
-    console.print("[bold cyan]Iniciando sincronización con el repositorio oficial de Kali Linux...[/bold cyan]")
-    db.scrape_from_kali_org(limit=limit, verbose=True)
+    src = source.lower().strip()
+
+    if src in ["kali", "all"]:
+        console.print("[bold cyan]Iniciando sincronización con el repositorio oficial de Kali Linux (kali.org)...[/bold cyan]")
+        db.scrape_from_kali_org(limit=limit, verbose=True)
+
+    if src in ["blackarch", "arch", "all"]:
+        console.print("[bold cyan]Iniciando sincronización con el repositorio oficial de BlackArch Linux (blackarch.org)...[/bold cyan]")
+        db.scrape_blackarch_org(limit=limit, verbose=True)
 
 
 @app.command(name="reset", help="Restaura la configuración a los valores de fábrica.")

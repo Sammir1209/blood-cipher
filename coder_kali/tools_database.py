@@ -18,6 +18,32 @@ console = Console()
 CONFIG_DIR = Path.home() / ".config" / "coder-kali"
 TOOLS_CACHE_FILE = CONFIG_DIR / "kali_tools.json"
 BASE_KALI_TOOLS_URL = "https://www.kali.org/tools/"
+BASE_BLACKARCH_TOOLS_URL = "https://blackarch.org/tools.html"
+
+
+def detect_linux_distro() -> Dict[str, str]:
+    """Detecta si el sistema es Kali/Debian o Arch/BlackArch."""
+    info = {"id": "linux", "name": "Linux", "pkg_manager": "apt"}
+    os_release = Path("/etc/os-release")
+    if os_release.exists():
+        try:
+            content = os_release.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                if line.startswith("ID="):
+                    info["id"] = line.split("=", 1)[1].strip('"').lower()
+                elif line.startswith("NAME="):
+                    info["name"] = line.split("=", 1)[1].strip('"')
+        except Exception:
+            pass
+
+    if info["id"] in ["arch", "blackarch", "manjaro", "endeavouros", "artix"]:
+        info["pkg_manager"] = "pacman"
+    elif info["id"] in ["kali", "debian", "ubuntu", "pop", "mint"]:
+        info["pkg_manager"] = "apt"
+    elif info["id"] in ["fedora", "rhel", "centos"]:
+        info["pkg_manager"] = "dnf"
+
+    return info
 
 # Base de datos pre-cargada con las herramientas más utilizadas de Kali Linux
 CURATED_DEFAULT_TOOLS: Dict[str, Dict[str, Any]] = {
@@ -523,5 +549,88 @@ class KaliToolsDatabase:
         self.save()
         if verbose:
             console.print(f"[bold green][✓] ¡Scraping finalizado! {scraped_count} herramientas indexadas y guardadas en cache local.[/bold green]")
+
+        return scraped_count
+
+    def scrape_blackarch_org(self, limit: Optional[int] = None, verbose: bool = True) -> int:
+        """
+        Realiza scraping en vivo de https://blackarch.org/tools.html
+        Extrayendo el catálogo masivo de herramientas de seguridad de BlackArch Linux.
+        """
+        try:
+            from bs4 import BeautifulSoup
+            import requests
+        except ImportError:
+            console.print("[bold red][!] Se requieren 'beautifulsoup4' y 'requests'.[/bold red]")
+            return 0
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        if verbose:
+            console.print(f"[bold cyan][*] Conectando a {BASE_BLACKARCH_TOOLS_URL}...[/bold cyan]")
+
+        try:
+            resp = requests.get(BASE_BLACKARCH_TOOLS_URL, headers=headers, timeout=25)
+            resp.raise_for_status()
+        except Exception as e:
+            console.print(f"[bold red][!] Error al conectar con blackarch.org: {e}[/bold red]")
+            return 0
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        table = soup.find("table")
+        if not table:
+            # Buscar filas de herramientas
+            rows = soup.find_all("tr")
+        else:
+            rows = table.find_all("tr")
+
+        scraped_count = 0
+        distro_info = detect_linux_distro()
+
+        for tr in rows[1:]:  # Saltar header
+            tds = tr.find_all("td")
+            if len(tds) < 4:
+                continue
+
+            name = tds[0].get_text(strip=True).lower()
+            version = tds[1].get_text(strip=True) if len(tds) > 1 else ""
+            description = tds[2].get_text(strip=True) if len(tds) > 2 else ""
+            category = tds[3].get_text(strip=True) if len(tds) > 3 else "BlackArch Security"
+            
+            link = tds[0].find("a")
+            homepage = link["href"] if link and link.has_attr("href") else f"https://blackarch.org/tools.html#{name}"
+
+            if not name or len(name) < 2:
+                continue
+
+            # Sintaxis y comandos en Arch Linux
+            install_cmd = f"sudo pacman -S {name}" if distro_info["pkg_manager"] == "pacman" else f"sudo apt install {name}"
+            usage_examples = [
+                f"{name} --help",
+                f"# Para instalar en Arch Linux: {install_cmd}",
+            ]
+
+            tool_obj = KaliTool(
+                name=name,
+                category=f"BlackArch: {category}",
+                url=homepage,
+                summary=description[:150],
+                description=description,
+                binaries=[name],
+                usage_examples=usage_examples,
+                flags={"--help": "Muestra las opciones de ayuda del comando", "pacman": f"Paquete disponible en BlackArch repo: {name}"},
+            )
+
+            self.tools[name] = tool_obj
+            scraped_count += 1
+
+            if limit and scraped_count >= limit:
+                break
+
+        self.save()
+        if verbose:
+            console.print(f"[bold green][✓] ¡Scraping de BlackArch completado! {scraped_count} herramientas de Arch agregadas al catálogo.[/bold green]")
 
         return scraped_count
