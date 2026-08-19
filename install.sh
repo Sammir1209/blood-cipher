@@ -66,12 +66,15 @@ fi
 echo -e "${GREEN}[✓] Entorno virtual configurado correctamente.${NC}"
 
 # 4. Instalar dependencias en el entorno virtual
-echo -e "${CYAN}[*] Actualizando pip e instalando dependencias...${NC}"
-"$VENV_DIR/bin/pip" install --upgrade pip setuptools wheel --quiet
+echo -e "${CYAN}[*] Actualizando pip y herramientas de empaquetado...${NC}"
+"$VENV_DIR/bin/pip" install --upgrade pip setuptools wheel
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo -e "${CYAN}[*] Instalando coder-kali desde ${REPO_DIR}...${NC}"
-"$VENV_DIR/bin/pip" install -e "$REPO_DIR" --quiet
+echo -e "${CYAN}[*] Instalando dependencias de Coder-Kali (litellm, rich, typer, bs4, etc.)...${NC}"
+"$VENV_DIR/bin/pip" install -r "$REPO_DIR/requirements.txt"
+
+echo -e "${CYAN}[*] Instalando paquete local coder-kali en modo editable...${NC}"
+"$VENV_DIR/bin/pip" install -e "$REPO_DIR" --no-deps
 
 # 5. Crear script lanzador ejecutable
 LAUNCHER="$INSTALL_DIR/coder-kali-launcher"
