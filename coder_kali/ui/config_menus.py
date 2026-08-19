@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 from coder_kali.config import ConfigManager, DEFAULT_PROVIDERS
+from coder_kali.model_discovery import fetch_live_models
 
 console = Console()
 
@@ -16,7 +17,7 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
     console.print(
         Panel(
             "[bold cyan]Asistente Interactivo de Configuración de IA[/bold cyan]\n"
-            "[dim]Selecciona tu proveedor, modelo y credenciales de acceso.[/dim]",
+            "[dim]Selecciona tu proveedor, ingresa tu API Key y elige entre los modelos activos en vivo.[/dim]",
             title="⚙️ CONFIGURACIÓN CODER-KALI",
             border_style="cyan",
         )
@@ -32,7 +33,6 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
     ]
 
     current_provider = config_mgr.get_active_provider()
-    # Asegurar que el default sea un objeto Choice correspondiente o el primer elemento
     default_choice = next((c for c in provider_choices if c.value == current_provider), provider_choices[0])
 
     chosen_provider = questionary.select(
@@ -47,13 +47,56 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
     prov_meta = DEFAULT_PROVIDERS[chosen_provider]
 
-    # 2. Selección de Modelo
-    model_choices = list(prov_meta.get("available_models", []))
+    # 2. Solicitar API Key o Endpoint URL PRIMERO
+    api_key = ""
+    api_base = None
+
+    if prov_meta.get("requires_api_key", True):
+        current_key = config_mgr.get_api_key(chosen_provider)
+        key_hint = f" (Actual: {'*'*6}...{current_key[-4:]})" if current_key and len(current_key) > 8 else ""
+
+        entered_key = questionary.password(
+            f"Ingresa tu API Key para {prov_meta['name']}{key_hint}:"
+        ).ask()
+
+        if entered_key and entered_key.strip():
+            api_key = entered_key.strip()
+            config_mgr.set_api_key(chosen_provider, api_key)
+        else:
+            api_key = current_key or ""
+
+        if not api_key:
+            console.print("[yellow][!] Advertencia: No se proporcionó API Key para este proveedor.[/yellow]")
+    else:
+        # Proveedor sin API Key (como Ollama)
+        current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")
+        api_base = questionary.text(
+            f"Endpoint URL de {prov_meta['name']}:",
+            default=current_base,
+        ).ask()
+        if api_base:
+            if "api_bases" not in config_mgr.config:
+                config_mgr.config["api_bases"] = {}
+            config_mgr.config["api_bases"][chosen_provider] = api_base.strip()
+
+    # 3. Consultar modelos activos en vivo desde la API del proveedor
+    live_models = []
+    with console.status(f"[bold cyan]Consultando modelos activos en tiempo real para {prov_meta['name']}...[/bold cyan]", spinner="dots"):
+        live_models = fetch_live_models(chosen_provider, api_key=api_key, api_base=api_base)
+
+    if live_models:
+        console.print(f"[bold green][✓] Se detectaron {len(live_models)} modelos activos disponibles en tu cuenta.[/bold green]")
+        model_choices = list(live_models)
+    else:
+        # Fallback a la lista curada si no fue posible consultar en vivo
+        model_choices = list(prov_meta.get("available_models", []))
+
     model_choices.append("Personalizado (Escribir manualmente)")
 
     current_model = config_mgr.get_active_model()
     default_model = current_model if current_model in model_choices else model_choices[0]
 
+    # 4. Selección del modelo activo
     chosen_model = questionary.select(
         f"Elige el modelo para {prov_meta['name']}:",
         choices=model_choices,
@@ -65,38 +108,13 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
     if chosen_model.startswith("Personalizado"):
         custom_model = questionary.text(
-            "Ingresa el identificador exacto del modelo (ej. gemini/gemini-2.5-pro, deepseek/deepseek-chat):",
+            "Ingresa el identificador exacto del modelo (ej. groq/qwen/qwen3.6-27b, gemini/gemini-2.5-flash):",
             default=prov_meta["default_model"],
         ).ask()
         if custom_model:
             chosen_model = custom_model.strip()
         else:
             chosen_model = prov_meta["default_model"]
-
-    # 3. Clave de API o Base URL
-    if prov_meta.get("requires_api_key", True):
-        current_key = config_mgr.get_api_key(chosen_provider)
-        key_hint = f" (Actual: {'*'*6}...{current_key[-4:]})" if current_key and len(current_key) > 8 else ""
-
-        api_key = questionary.password(
-            f"Ingresa tu API Key para {prov_meta['name']}{key_hint}:"
-        ).ask()
-
-        if api_key and api_key.strip():
-            config_mgr.set_api_key(chosen_provider, api_key.strip())
-        elif not current_key:
-            console.print("[yellow][!] Advertencia: No se proporcionó API Key para este proveedor.[/yellow]")
-    else:
-        # Proveedor sin API Key requerida (como Ollama)
-        current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")
-        api_base = questionary.text(
-            f"Endpoint URL de {prov_meta['name']}:",
-            default=current_base,
-        ).ask()
-        if api_base:
-            if "api_bases" not in config_mgr.config:
-                config_mgr.config["api_bases"] = {}
-            config_mgr.config["api_bases"][chosen_provider] = api_base.strip()
 
     # Guardar proveedor y modelo
     config_mgr.set_provider(chosen_provider, chosen_model)
