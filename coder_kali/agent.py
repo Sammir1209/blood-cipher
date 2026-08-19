@@ -10,6 +10,7 @@ from rich.console import Console
 from coder_kali.config import ConfigManager
 from coder_kali.prompts import MEGA_PROMPT_SISTEMA
 from coder_kali.system_executor import SystemExecutor, ExecutionResult
+from coder_kali.tools_database import KaliToolsDatabase
 from coder_kali.ui.chat_render import (
     render_ai_message,
     render_execution_result,
@@ -26,10 +27,12 @@ class KaliAgent:
         self,
         config_mgr: Optional[ConfigManager] = None,
         system_executor: Optional[SystemExecutor] = None,
+        tools_db: Optional[KaliToolsDatabase] = None,
         custom_system_prompt: Optional[str] = None,
     ):
         self.config_mgr = config_mgr or ConfigManager()
         self.executor = system_executor or SystemExecutor()
+        self.tools_db = tools_db or KaliToolsDatabase()
         self.system_prompt = custom_system_prompt or MEGA_PROMPT_SISTEMA
         self.messages: List[Dict[str, str]] = []
         self.max_tool_iterations = 10
@@ -65,7 +68,13 @@ class KaliAgent:
         Envía un mensaje de usuario e inicia el bucle de ejecución de acciones XML.
         Retorna la respuesta final generada por el modelo.
         """
-        self.messages.append({"role": "user", "content": user_text})
+        # Detectar si se mencionan herramientas de Kali y adjuntar su sintaxis oficial
+        tool_context = self.tools_db.detect_relevant_context(user_text)
+        augmented_user_message = user_text
+        if tool_context:
+            augmented_user_message = f"{user_text}\n\n{tool_context}"
+
+        self.messages.append({"role": "user", "content": augmented_user_message})
 
         iterations = 0
         final_response = ""

@@ -8,5 +8,6 @@ __author__ = "Coder-Kali Team"
 from coder_kali.agent import KaliAgent
 from coder_kali.config import ConfigManager
 from coder_kali.system_executor import SystemExecutor
+from coder_kali.tools_database import KaliToolsDatabase
 
-__all__ = ["KaliAgent", "ConfigManager", "SystemExecutor", "__version__"]
+__all__ = ["KaliAgent", "ConfigManager", "SystemExecutor", "KaliToolsDatabase", "__version__"]

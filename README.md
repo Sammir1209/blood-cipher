@@ -113,7 +113,24 @@ Para resolver una tarea puntual sin ingresar al chat:
 coder-kali run "Escanea los puertos abiertos en localhost y sugiere remediaciones de seguridad"
 ```
 
-### 3. Diagnóstico del Entorno
+### 3. Base de Conocimiento de Herramientas de Kali (Scraper Oficial)
+Coder-Kali integra un scraper nativo que indexa el catálogo oficial de [kali.org/tools](https://www.kali.org/tools/), conociendo las opciones, binarios y sintaxis exacta de cada herramienta:
+
+```bash
+# Listar categorías y herramientas indexadas
+coder-kali tools list
+
+# Buscar herramientas por propósito (ej. wifi, bruteforce, reverse)
+coder-kali tools search "fuzzing"
+
+# Ver ficha técnica, flags y ejemplos oficiales de una herramienta
+coder-kali tools info nmap
+
+# Sincronizar/actualizar la base de datos descargando las últimas herramientas de kali.org
+coder-kali tools sync
+```
+
+### 4. Diagnóstico del Entorno
 Comprueba si tus herramientas de pentesting están listas:
 
 ```bash

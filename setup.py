@@ -31,6 +31,8 @@ setup(
         "typer>=0.12.0",
         "questionary>=2.0.1",
         "cryptography>=42.0.0",
+        "beautifulsoup4>=4.12.0",
+        "requests>=2.31.0",
         "python-dotenv>=1.0.0",
     ],
     extras_require={

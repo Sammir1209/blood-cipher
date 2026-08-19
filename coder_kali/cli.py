@@ -181,6 +181,112 @@ def doctor():
     render_system_status(status_data)
 
 
+# ==============================================================================
+# SUBCOMANDOS DE HERRAMIENTAS Y SCRAPING (https://www.kali.org/tools/)
+# ==============================================================================
+tools_app = typer.Typer(
+    name="tools",
+    help="🧰 Base de conocimiento y scraper oficial de herramientas de Kali Linux (https://www.kali.org/tools/).",
+)
+app.add_typer(tools_app, name="tools")
+
+
+@tools_app.command(name="list", help="Lista las herramientas y categorías disponibles en la base de datos local.")
+def list_tools():
+    """Muestra todas las herramientas indexadas por categoría."""
+    from rich.table import Table
+    from coder_kali.tools_database import KaliToolsDatabase
+
+    db = KaliToolsDatabase()
+    categories = db.get_categories()
+
+    table = Table(title="🧰 Herramientas de Kali Linux Indexadas", box=typer.colors.RESET)
+    table.add_column("Categoría", style="bold cyan")
+    table.add_column("Herramientas", style="white")
+
+    total = 0
+    for cat, tools in categories.items():
+        table.add_row(cat, ", ".join(tools))
+        total += len(tools)
+
+    console.print(table)
+    console.print(f"\n[bold green]Total de herramientas indexadas:[/bold green] {total}")
+
+
+@tools_app.command(name="search", help="Busca una herramienta por nombre, comando o palabra clave.")
+def search_tools(
+    query: str = typer.Argument(..., help="Término de búsqueda (ej. 'fuzzing', 'wifi', 'sql', 'nmap')")
+):
+    """Busca herramientas en la base de conocimiento."""
+    from rich.table import Table
+    from coder_kali.tools_database import KaliToolsDatabase
+
+    db = KaliToolsDatabase()
+    results = db.search_tools(query)
+
+    if not results:
+        console.print(f"[yellow][!] No se encontraron herramientas para: '{query}'[/yellow]")
+        return
+
+    table = Table(title=f"Resultados para '{query}' ({len(results)})", border_style="cyan")
+    table.add_column("Herramienta", style="bold green")
+    table.add_column("Categoría", style="bold cyan")
+    table.add_column("Descripción", style="white")
+
+    for t in results:
+        table.add_row(t.name, t.category, t.summary[:90] + ("..." if len(t.summary) > 90 else ""))
+
+    console.print(table)
+
+
+@tools_app.command(name="info", help="Muestra la sintaxis oficial, flags y ejemplos de una herramienta de Kali.")
+def info_tool(
+    name: str = typer.Argument(..., help="Nombre de la herramienta (ej. 'nmap', 'hydra', 'sqlmap')")
+):
+    """Muestra la ficha técnica completa de una herramienta."""
+    from rich.panel import Panel
+    from rich.syntax import Syntax
+    from rich.table import Table
+    from coder_kali.tools_database import KaliToolsDatabase
+
+    db = KaliToolsDatabase()
+    tool = db.get_tool(name)
+
+    if not tool:
+        console.print(f"[red][!] La herramienta '{name}' no está en la base de datos local.[/red]")
+        console.print(f"[dim]Puedes sincronizar la base completa con: coder-kali tools sync[/dim]")
+        return
+
+    console.print()
+    header_text = f"[bold green]{tool.name.upper()}[/bold green] - [cyan]{tool.category}[/cyan]\n[dim]{tool.url}[/dim]\n\n{tool.description}"
+    console.print(Panel(header_text, title="📖 FICHA DE HERRAMIENTA KALI", border_style="bright_cyan"))
+
+    if tool.usage_examples:
+        console.print("\n[bold cyan]💡 Sintaxis y Ejemplos Oficiales:[/bold cyan]")
+        for ex in tool.usage_examples:
+            console.print(Panel(Syntax(ex, "bash", theme="monokai"), border_style="green", padding=(0, 1)))
+
+    if tool.flags:
+        table = Table(title="🚩 Parámetros & Flags Clave", border_style="yellow")
+        table.add_column("Flag / Opción", style="bold yellow")
+        table.add_column("Descripción", style="white")
+        for flg, desc in tool.flags.items():
+            table.add_row(flg, desc)
+        console.print(table)
+
+
+@tools_app.command(name="sync", help="Descarga y actualiza todas las herramientas directamente desde https://www.kali.org/tools/.")
+def sync_tools(
+    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limitar cantidad de herramientas a scrapear (útil para pruebas rápidas)")
+):
+    """Ejecuta el scraper en vivo contra kali.org/tools/."""
+    from coder_kali.tools_database import KaliToolsDatabase
+
+    db = KaliToolsDatabase()
+    console.print("[bold cyan]Iniciando sincronización con el repositorio oficial de Kali Linux...[/bold cyan]")
+    db.scrape_from_kali_org(limit=limit, verbose=True)
+
+
 @app.command(name="reset", help="Restaura la configuración a los valores de fábrica.")
 def reset():
     """Restablece la configuración."""
