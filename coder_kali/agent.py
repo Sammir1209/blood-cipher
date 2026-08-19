@@ -43,8 +43,28 @@ class KaliAgent:
         """Reinicia el historial de mensajes con el Mega-Prompt del sistema."""
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
+    def _prune_context(self):
+        """Mantiene el contexto compacto para no exceder los límites de tokens por minuto (TPM)."""
+        if len(self.messages) <= 4:
+            return
+
+        # Mantener mensaje de sistema [0]
+        system_msg = self.messages[0]
+        # Recortar salidas de comandos antiguas de mensajes intermedios
+        for i in range(1, len(self.messages) - 2):
+            msg = self.messages[i]
+            content = msg.get("content", "")
+            if len(content) > 500:
+                msg["content"] = content[:300] + "\n... [salida anterior resumida para ahorrar tokens] ..."
+
+        # Si el historial tiene más de 8 mensajes, conservar solo los últimos 4
+        if len(self.messages) > 8:
+            self.messages = [system_msg] + self.messages[-4:]
+
     def _prepare_call_kwargs(self) -> Dict[str, Any]:
         """Prepara los argumentos necesarios para la llamada a LiteLLM."""
+        self._prune_context()
+
         provider = self.config_mgr.get_active_provider()
         model = self.config_mgr.get_active_model()
         api_key = self.config_mgr.get_api_key(provider)
@@ -60,7 +80,7 @@ class KaliAgent:
             "model": model,
             "messages": self.messages,
             "temperature": self.config_mgr.get("temperature", 0.2),
-            "max_tokens": self.config_mgr.get("max_tokens", 4096),
+            "max_tokens": min(self.config_mgr.get("max_tokens", 1500), 2048),
         }
 
         if api_key:
@@ -111,18 +131,27 @@ class KaliAgent:
                         return f"Error: {err_msg}"
                     except Exception as e:
                         err_str = str(e)
-                        # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/OpenAI)
-                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str:
+
+                        # Si el mensaje es muy largo (Request too large), podar agresivamente y reintentar
+                        if "request too large" in err_str.lower() or "reduce your message size" in err_str.lower():
+                            console.print("[yellow][!] Historial muy extenso. Compactando contexto automáticamente...[/yellow]")
+                            if len(self.messages) > 2:
+                                self.messages = [self.messages[0], self.messages[-1]]
+                            retry_count += 1
+                            continue
+
+                        # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/Gemini)
+                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
                             retry_count += 1
                             if retry_count < max_retries:
-                                wait_seconds = 12
-                                # Intentar extraer el tiempo exacto si viene en el mensaje de error
+                                wait_seconds = 15
+                                # Intentar extraer el tiempo exacto si viene en el mensaje de error (ej. retryDelay o try again in X.Xs)
                                 import re
-                                match = re.search(r"try again in (\d+(?:\.\d+)?)s", err_str, re.IGNORECASE)
+                                match = re.search(r"(?:retry in|retryDelay[\"':\s]+)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
                                 if match:
                                     wait_seconds = int(float(match.group(1))) + 2
 
-                                console.print(f"[yellow][!] Límite de tokens por minuto alcanzado. Reintentando automáticamente en {wait_seconds}s ({retry_count}/{max_retries})...[/yellow]")
+                                console.print(f"[yellow][!] Límite de la API alcanzado. Reintentando automáticamente en {wait_seconds}s ({retry_count}/{max_retries})...[/yellow]")
                                 time.sleep(wait_seconds)
                                 continue
                         

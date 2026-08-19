@@ -397,34 +397,29 @@ class KaliToolsDatabase:
         """
         text_lower = text.lower()
         matched_tools = []
+        stop_words = {"ip", "as", "in", "to", "at", "is", "or", "and", "de", "la", "el", "un", "en", "que", "si", "no", "por"}
 
         for name, tool in self.tools.items():
-            # Coincidencia por nombre exacto o comando
-            if re.search(r"\b" + re.escape(name) + r"\b", text_lower) or any(
-                re.search(r"\b" + re.escape(b) + r"\b", text_lower) for b in tool.binaries
-            ):
+            if len(name) < 3 or name in stop_words:
+                continue
+            # Coincidencia por nombre exacto de herramienta
+            if re.search(r"\b" + re.escape(name) + r"\b", text_lower):
                 matched_tools.append(tool)
 
         if not matched_tools:
             return ""
 
-        context_blocks = ["[MANUAL DE HERRAMIENTAS OFICIALES DE KALI LINUX ACTIVADO]"]
-        for tool in matched_tools[:4]:  # Limitar a máximo 4 para no sobrecargar tokens
-            lines = [f"\n--- HERRAMIENTA: {tool.name.upper()} ({tool.category}) ---"]
-            lines.append(f"Propósito: {tool.summary}")
-            if tool.binaries:
-                lines.append(f"Binarios disponibles: {', '.join(tool.binaries)}")
+        context_blocks = ["[REFERENCIA DE SINTAXIS KALI/ARCH]"]
+        for tool in matched_tools[:2]:  # Limitar a máximo 2 herramientas para ahorrar tokens
+            lines = [f"• {tool.name.upper()}: {tool.summary}"]
             if tool.usage_examples:
-                lines.append("Ejemplos de sintaxis oficial:")
-                for ex in tool.usage_examples[:4]:
-                    lines.append(f"  $ {ex}")
+                lines.append(f"  Ejemplo: {tool.usage_examples[0]}")
             if tool.flags:
-                lines.append("Parámetros clave:")
-                for flg, desc in list(tool.flags.items())[:6]:
-                    lines.append(f"  {flg}: {desc}")
+                first_flags = [f"{k}: {v}" for k, v in list(tool.flags.items())[:3]]
+                lines.append(f"  Flags: {'; '.join(first_flags)}")
             context_blocks.append("\n".join(lines))
 
-        return "\n".join(context_blocks) + "\n[FIN DEL MANUAL DE REFERENCIA]\n"
+        return "\n".join(context_blocks) + "\n"
 
     def scrape_from_kali_org(self, limit: Optional[int] = None, verbose: bool = True) -> int:
         """

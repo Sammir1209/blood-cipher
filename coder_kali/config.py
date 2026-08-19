@@ -214,7 +214,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "provider": "gemini",
     "model": "gemini/gemini-2.5-flash",
     "temperature": 0.2,
-    "max_tokens": 4096,
+    "max_tokens": 1500,
     "api_keys": {},
     "api_bases": {
         "ollama": "http://localhost:11434"
