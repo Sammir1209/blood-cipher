@@ -3,6 +3,7 @@ coder_kali/agent.py - Conector Multi-IA (LiteLLM) y Bucle de Ejecución del Agen
 Gestiona el contexto de la conversación, envía el Mega-Prompt y ejecuta el bucle de herramientas XML.
 """
 
+import os
 import sys
 from typing import List, Dict, Any, Optional, Generator
 from rich.console import Console
