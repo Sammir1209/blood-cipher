@@ -5,8 +5,13 @@ Gestiona el contexto de la conversación, envía el Mega-Prompt y ejecuta el buc
 
 import os
 import sys
+import logging
 from typing import List, Dict, Any, Optional, Generator
 from rich.console import Console
+
+# Silenciar warnings innecesarios de LiteLLM sobre mapas de costos
+os.environ["LITELLM_LOG"] = "ERROR"
+logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 
 from coder_kali.config import ConfigManager
 from coder_kali.prompts import MEGA_PROMPT_SISTEMA
