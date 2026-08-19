@@ -26,15 +26,21 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
     # 1. Selección de Proveedor
     provider_choices = [
-        {"name": f"{info['name']} ({prov})", "value": prov}
+        questionary.Choice(
+            title=f"{info['name']} ({prov})",
+            value=prov
+        )
         for prov, info in DEFAULT_PROVIDERS.items()
     ]
 
     current_provider = config_mgr.get_active_provider()
+    # Asegurar que el default sea un objeto Choice correspondiente o el primer elemento
+    default_choice = next((c for c in provider_choices if c.value == current_provider), provider_choices[0])
+
     chosen_provider = questionary.select(
         "Elige tu proveedor de Inteligencia Artificial:",
         choices=provider_choices,
-        default=current_provider,
+        default=default_choice,
     ).ask()
 
     if not chosen_provider:
@@ -44,14 +50,16 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
     prov_meta = DEFAULT_PROVIDERS[chosen_provider]
 
     # 2. Selección de Modelo
-    model_choices = prov_meta.get("available_models", [])
+    model_choices = list(prov_meta.get("available_models", []))
     model_choices.append("Personalizado (Escribir manualmente)")
 
     current_model = config_mgr.get_active_model()
+    default_model = current_model if current_model in model_choices else model_choices[0]
+
     chosen_model = questionary.select(
         f"Elige el modelo para {prov_meta['name']}:",
         choices=model_choices,
-        default=current_model if current_model in model_choices else prov_meta["default_model"],
+        default=default_model,
     ).ask()
 
     if not chosen_model:
