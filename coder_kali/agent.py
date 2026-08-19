@@ -89,7 +89,8 @@ class KaliAgent:
                     litellm.suppress_debug_info = True
                     kwargs = self._prepare_call_kwargs()
                     response = litellm.completion(**kwargs)
-                    ai_content = response.choices[0].message.content or ""
+                    choice = response.choices[0]
+                    ai_content = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
                 except ImportError:
                     err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"
                     render_error("Dependencia faltante", err_msg)

@@ -137,7 +137,9 @@ def test_provider_connection(config_mgr: ConfigManager) -> bool:
                 kwargs["api_base"] = api_base
 
             response = litellm.completion(**kwargs)
-            reply = response.choices[0].message.content.strip()
+            choice = response.choices[0]
+            raw_content = getattr(choice.message, "content", None) or getattr(choice.message, "reasoning_content", None) or "OK (Conexión establecida)"
+            reply = str(raw_content).strip()
             console.print(f"[bold green][✓] Test exitoso. Respuesta del modelo:[/bold green] [white]{reply}[/white]")
             return True
         except Exception as e:
