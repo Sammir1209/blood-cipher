@@ -12,6 +12,7 @@ from coder_kali.config import ConfigManager
 from coder_kali.prompts import MEGA_PROMPT_SISTEMA
 from coder_kali.system_executor import SystemExecutor, ExecutionResult
 from coder_kali.tools_database import KaliToolsDatabase
+from coder_kali.session_manager import SessionManager, ChatSession
 from coder_kali.ui.chat_render import (
     render_ai_message,
     render_execution_result,
@@ -29,19 +30,38 @@ class KaliAgent:
         config_mgr: Optional[ConfigManager] = None,
         system_executor: Optional[SystemExecutor] = None,
         tools_db: Optional[KaliToolsDatabase] = None,
+        session_mgr: Optional[SessionManager] = None,
+        session_id: Optional[str] = None,
         custom_system_prompt: Optional[str] = None,
     ):
         self.config_mgr = config_mgr or ConfigManager()
         self.executor = system_executor or SystemExecutor()
         self.tools_db = tools_db or KaliToolsDatabase()
+        self.session_mgr = session_mgr or SessionManager()
         self.system_prompt = custom_system_prompt or MEGA_PROMPT_SISTEMA
         self.messages: List[Dict[str, str]] = []
         self.max_tool_iterations = 10
-        self.reset_conversation()
+
+        # Cargar sesión existente o crear nueva
+        provider = self.config_mgr.get_active_provider()
+        model = self.config_mgr.get_active_model()
+        if session_id:
+            loaded_sess = self.session_mgr.get_session(session_id)
+            if loaded_sess:
+                self.current_session = loaded_sess
+                self.messages = list(loaded_sess.messages) if loaded_sess.messages else [{"role": "system", "content": self.system_prompt}]
+            else:
+                self.current_session = self.session_mgr.create_session(provider, model)
+                self.reset_conversation()
+        else:
+            self.current_session = self.session_mgr.create_session(provider, model)
+            self.reset_conversation()
 
     def reset_conversation(self):
         """Reinicia el historial de mensajes con el Mega-Prompt del sistema."""
         self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.current_session.messages = list(self.messages)
+        self.session_mgr.save_session(self.current_session)
 
     def _prune_context(self):
         """Mantiene el contexto compacto para no exceder los límites de tokens por minuto (TPM)."""
@@ -212,5 +232,9 @@ class KaliAgent:
             if should_stop:
                 console.print("[yellow][*] Secuencia detenida debido a que el operador rechazó una acción.[/yellow]")
                 break
+
+        # Guardar historial actualizado en la sesión persistente
+        self.current_session.messages = list(self.messages)
+        self.session_mgr.save_session(self.current_session)
 
         return final_response
