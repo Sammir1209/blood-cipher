@@ -14,7 +14,7 @@ os.environ["LITELLM_LOG"] = "ERROR"
 logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 
 from coder_kali.config import ConfigManager
-from coder_kali.prompts import MEGA_PROMPT_SISTEMA
+from coder_kali.prompts import MEGA_PROMPT_SISTEMA, PROMPT_PLANNING_MODE
 from coder_kali.system_executor import SystemExecutor, ExecutionResult
 from coder_kali.tools_database import KaliToolsDatabase
 from coder_kali.session_manager import SessionManager, ChatSession
@@ -40,12 +40,14 @@ class KaliAgent:
         scope_mgr: Optional[ScopeManager] = None,
         session_id: Optional[str] = None,
         custom_system_prompt: Optional[str] = None,
+        planning_mode: bool = False,
     ):
         self.config_mgr = config_mgr or ConfigManager()
         self.executor = system_executor or SystemExecutor()
         self.tools_db = tools_db or KaliToolsDatabase()
         self.session_mgr = session_mgr or SessionManager()
         self.scope_mgr = scope_mgr or ScopeManager()
+        self.planning_mode = planning_mode
         self.system_prompt = custom_system_prompt or MEGA_PROMPT_SISTEMA
         self.messages: List[Dict[str, str]] = []
         self.max_tool_iterations = 10
@@ -66,7 +68,7 @@ class KaliAgent:
             self.reset_conversation()
 
     def _get_effective_system_prompt(self) -> str:
-        """Construye el prompt de sistema enriquecido con el documento de alcance (SOW) activo si existe."""
+        """Construye el prompt de sistema enriquecido con el documento de alcance (SOW) y modo plan si aplica."""
         prompt = self.system_prompt
         active_scope = self.scope_mgr.get_active_scope_content()
         if active_scope:
@@ -78,6 +80,8 @@ class KaliAgent:
                 "Instrucción: Procede con las pruebas de seguridad autorizadas dentro del alcance (In-Scope) "
                 "y respeta estrictamente los límites y exclusiones (Out-of-Scope) definidos en este acuerdo."
             )
+        if self.planning_mode:
+            prompt += f"\n\n{PROMPT_PLANNING_MODE}"
         return prompt
 
     def reset_conversation(self):

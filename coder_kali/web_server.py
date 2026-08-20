@@ -1,6 +1,6 @@
 """
 coder_kali/web_server.py - Centro de Operaciones Visual y Web UI Táctica para Coder-Kali.
-Panel Web Dark Cyberpunk con streaming en tiempo real (SSE), terminal en vivo, escáner visual de objetivos y gestión de scopes.
+Diseño Negro y Blanco con Ave Fénix de Código, Modo Planificación con botón PROCEED, confirmaciones modales y streaming en tiempo real.
 """
 
 import os
@@ -31,32 +31,33 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CODER-KALI // Tactical Cyber Operations Platform</title>
+    <title>CODER-KALI // Autonomous Cyber Operations</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
-            --bg-base: #060911;
-            --bg-surface: #0c111e;
-            --bg-card: #11182a;
-            --bg-card-hover: #162038;
-            --border: #1a2744;
-            --border-light: #26385f;
+            --bg-base: #020408;
+            --bg-surface: #070a10;
+            --bg-card: #0d121c;
+            --bg-card-hover: #131a28;
+            --border: #1a2333;
+            --border-light: #26334a;
+            --border-focus: #ffffff;
+            --accent-white: #ffffff;
+            --accent-silver: #cbd5e1;
             --accent-green: #00ff9d;
             --accent-cyan: #00f0ff;
-            --accent-purple: #a855f7;
-            --accent-pink: #ec4899;
             --accent-red: #ff3366;
-            --accent-amber: #f59e0b;
-            --text-main: #f8fafc;
+            --text-main: #ffffff;
             --text-muted: #94a3b8;
             --text-dim: #64748b;
-            --font-ui: 'Outfit', sans-serif;
+            --font-ui: 'Outfit', -apple-system, sans-serif;
             --font-code: 'Fira Code', monospace;
-            --glow-green: 0 0 25px rgba(0, 255, 157, 0.4);
-            --glow-cyan: 0 0 25px rgba(0, 240, 255, 0.4);
+            --glow-white: 0 0 25px rgba(255, 255, 255, 0.25);
+            --glow-green: 0 0 20px rgba(0, 255, 157, 0.3);
+            --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -69,17 +70,17 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             height: 100vh;
             overflow: hidden;
             background-image: 
-                radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.04) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.04) 0%, transparent 40%);
+                radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
         }
 
         /* Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
-        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #fff; }
 
-        /* Left Navigation Bar */
+        /* Left Sidebar */
         .sidebar {
             width: 320px;
             background: var(--bg-surface);
@@ -99,34 +100,40 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             border-bottom: 1px solid var(--border);
         }
 
-        .brand-logo {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
+        .brand-logo-phoenix {
+            width: 46px;
+            height: 46px;
+            background: #000000;
+            border: 1px solid rgba(255,255,255,0.25);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
-            color: #000;
-            box-shadow: var(--glow-green);
+            box-shadow: var(--glow-white);
             flex-shrink: 0;
         }
 
+        .brand-logo-phoenix svg {
+            width: 28px;
+            height: 28px;
+            fill: #ffffff;
+            filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
+        }
+
         .brand-text h1 {
-            font-size: 1.25rem;
+            font-size: 1.22rem;
             font-weight: 900;
-            letter-spacing: 1.5px;
-            background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
 
         .brand-text p {
-            font-size: 0.72rem;
-            color: var(--accent-green);
+            font-size: 0.7rem;
+            color: var(--accent-silver);
             font-family: var(--font-code);
             font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .btn-action {
@@ -141,23 +148,81 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             font-size: 0.9rem;
             cursor: pointer;
             border: none;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease;
         }
 
         .btn-new-chat {
-            background: linear-gradient(135deg, var(--accent-green) 0%, #00c978 100%);
-            color: #05140b;
-            box-shadow: 0 4px 15px rgba(0, 255, 157, 0.25);
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
         }
 
         .btn-new-chat:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 255, 157, 0.45);
+            box-shadow: 0 6px 22px rgba(255, 255, 255, 0.4);
+            background: #f1f5f9;
+        }
+
+        /* Planning Mode Toggle Pill */
+        .mode-toggle-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mode-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 22px;
+        }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-light);
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: #000;
         }
 
         .status-card {
-            background: rgba(0, 240, 255, 0.04);
-            border: 1px solid rgba(0, 240, 255, 0.2);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px 14px;
             display: flex;
@@ -173,7 +238,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .status-row .label { color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-        .status-row .val { font-family: var(--font-code); font-weight: 600; color: var(--accent-cyan); }
+        .status-row .val { font-family: var(--font-code); font-weight: 600; color: #ffffff; }
 
         .nav-tabs-grid {
             display: grid;
@@ -198,9 +263,9 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .btn-tab:hover, .btn-tab.active {
-            border-color: var(--accent-cyan);
+            border-color: #ffffff;
             background: var(--bg-card-hover);
-            color: var(--accent-cyan);
+            color: #ffffff;
         }
 
         .section-header {
@@ -213,6 +278,17 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             letter-spacing: 1px;
             color: var(--text-dim);
         }
+
+        .btn-del-all {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.72rem;
+            transition: all 0.2s;
+        }
+
+        .btn-del-all:hover { color: var(--accent-red); }
 
         .session-list {
             flex: 1;
@@ -242,9 +318,9 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .session-item.active {
-            border-color: var(--accent-green);
-            background: rgba(0, 255, 157, 0.06);
-            box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
+            border-color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
         }
 
         .session-item .session-item-row {
@@ -276,28 +352,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .session-item:hover .btn-del-session {
-            opacity: 1;
-        }
-
-        .btn-del-session:hover {
-            color: var(--accent-red);
-            background: rgba(255, 51, 102, 0.15);
-            transform: scale(1.15);
-        }
-
-        .btn-del-all {
-            background: transparent;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            font-size: 0.72rem;
-            transition: all 0.2s;
-        }
-
-        .btn-del-all:hover {
-            color: var(--accent-red);
-        }
+        .session-item:hover .btn-del-session { opacity: 1; }
+        .btn-del-session:hover { color: var(--accent-red); background: rgba(255, 51, 102, 0.15); transform: scale(1.15); }
 
         .session-item .s-meta {
             display: flex;
@@ -315,6 +371,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             flex-direction: column;
             height: 100vh;
             position: relative;
+            background: var(--bg-base);
         }
 
         .topbar {
@@ -342,13 +399,13 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .badge-scope {
-            background: rgba(168, 85, 247, 0.12);
-            border: 1px solid var(--accent-purple);
-            color: #d8b4fe;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            color: #ffffff;
         }
 
         .badge-engine {
-            background: rgba(0, 255, 157, 0.1);
+            background: rgba(0, 255, 157, 0.08);
             border: 1px solid var(--accent-green);
             color: var(--accent-green);
         }
@@ -369,7 +426,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .btn-icon:hover { color: #fff; border-color: var(--accent-cyan); background: var(--bg-card-hover); }
+        .btn-icon:hover { color: #fff; border-color: #ffffff; background: var(--bg-card-hover); }
 
         /* Quick Tools Toolbar */
         .quick-tools-bar {
@@ -399,14 +456,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .tool-chip:hover {
-            border-color: var(--accent-cyan);
+            border-color: #ffffff;
             color: #fff;
-            background: rgba(0, 240, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
         }
 
-        .tool-chip i { color: var(--accent-cyan); }
-
-        /* View Container */
         .view-content {
             flex: 1;
             display: flex;
@@ -429,11 +483,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             flex-direction: column;
             max-width: 88%;
             gap: 8px;
-            animation: fadeIn 0.3s ease-out;
+            animation: fadeIn 0.25s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -449,8 +503,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             font-weight: 700;
         }
 
-        .chat-msg.user .msg-header { color: var(--accent-green); flex-direction: row-reverse; }
-        .chat-msg.assistant .msg-header { color: var(--accent-cyan); }
+        .chat-msg.user .msg-header { color: #ffffff; flex-direction: row-reverse; }
+        .chat-msg.assistant .msg-header { color: var(--accent-silver); }
 
         .msg-body {
             padding: 16px 20px;
@@ -461,31 +515,90 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .chat-msg.user .msg-body {
-            background: linear-gradient(135deg, #0e291e, #13392a);
-            border: 1px solid var(--accent-green);
-            color: #f0fdf4;
-            box-shadow: 0 4px 15px rgba(0, 255, 157, 0.1);
+            background: #111622;
+            border: 1px solid var(--border-light);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
 
         .chat-msg.assistant .msg-body {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-main);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Implementation Plan Card (Antigravity Style) */
+        .plan-card {
+            background: #090e18;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            padding: 18px 22px;
+            margin: 12px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+
+        .plan-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .plan-card-header h3 {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .plan-card-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+
+        .btn-proceed {
+            background: linear-gradient(135deg, var(--accent-green) 0%, #00cc7a 100%);
+            color: #000000;
+            font-weight: 900;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: var(--glow-green);
+            transition: all 0.2s;
+        }
+
+        .btn-proceed:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 25px rgba(0, 255, 157, 0.6);
         }
 
         /* Live Terminal Boxes */
         .terminal-box {
-            background: #050811;
+            background: #000000;
             border: 1px solid var(--border-light);
             border-radius: 8px;
             margin: 12px 0;
             overflow: hidden;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
         }
 
         .terminal-box-header {
-            background: #090f1e;
+            background: #080c14;
             padding: 8px 14px;
             display: flex;
             align-items: center;
@@ -496,30 +609,18 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             color: var(--text-muted);
         }
 
-        .terminal-box-header .tag { color: var(--accent-cyan); font-weight: 700; display: flex; align-items: center; gap: 6px; }
-        .terminal-box-header .badge-run { background: rgba(0, 255, 157, 0.15); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; }
+        .terminal-box-header .tag { color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .terminal-box-header .badge-run { background: rgba(255, 255, 255, 0.1); color: #ffffff; padding: 2px 6px; border-radius: 4px; }
 
         .terminal-box-code {
             padding: 14px;
             font-family: var(--font-code);
             font-size: 0.85rem;
-            color: #38bdf8;
+            color: #ffffff;
             overflow-x: auto;
             white-space: pre-wrap;
             line-height: 1.5;
-            background: #050811;
-        }
-
-        .terminal-output {
-            background: #020408;
-            border-top: 1px dashed var(--border);
-            padding: 12px 14px;
-            font-family: var(--font-code);
-            font-size: 0.8rem;
-            color: #a7f3d0;
-            max-height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+            background: #000000;
         }
 
         /* Input Controls */
@@ -540,12 +641,12 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             border-radius: 10px;
             padding: 6px 14px;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
 
         .input-box:focus-within {
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
         }
 
         .input-box input {
@@ -562,8 +663,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         .input-box input::placeholder { color: var(--text-dim); }
 
         .btn-submit {
-            background: linear-gradient(135deg, var(--accent-cyan) 0%, #00b4d8 100%);
-            color: #03131a;
+            background: #ffffff;
+            color: #000000;
             font-weight: 800;
             border: none;
             padding: 10px 20px;
@@ -577,7 +678,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .btn-submit:hover { box-shadow: 0 0 15px var(--accent-cyan); transform: scale(1.02); }
+        .btn-submit:hover { box-shadow: var(--glow-white); transform: scale(1.02); }
         .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
         /* Recon Scanner Visual View */
@@ -634,7 +735,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--accent-cyan);
+            color: #ffffff;
         }
 
         .recon-card .card-body {
@@ -650,144 +751,55 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             white-space: pre-wrap;
         }
 
-        /* Live Mission Checklist */
-        .mission-checklist {
-            background: rgba(17, 24, 42, 0.95);
-            border: 1px solid var(--border-light);
-            border-radius: 10px;
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
-            margin-bottom: 8px;
-        }
-
-        .mission-checklist-header {
-            display: flex;
+        /* Minimal 3-Dot Neural Thinking Indicator */
+        .minimal-thinking {
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            font-weight: 800;
-            font-family: var(--font-code);
-            color: var(--accent-cyan);
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-            letter-spacing: 0.5px;
-        }
-
-        .checklist-items {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 10px;
-        }
-
-        .check-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.82rem;
-            font-family: var(--font-ui);
-            font-weight: 600;
-            padding: 8px 12px;
-            border-radius: 6px;
-            background: var(--bg-surface);
+            padding: 10px 16px;
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        .check-item.pending {
-            opacity: 0.5;
-            color: var(--text-muted);
-            border-color: var(--border);
-        }
-
-        .check-item.running {
-            border-color: var(--accent-cyan);
-            background: rgba(0, 240, 255, 0.08);
-            color: #fff;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
-            transform: scale(1.02);
-        }
-
-        .check-item.done {
-            border-color: var(--accent-green);
-            background: rgba(0, 255, 157, 0.08);
-            color: #fff;
-            box-shadow: 0 0 10px rgba(0, 255, 157, 0.15);
-        }
-
-        .check-status-badge {
-            font-family: var(--font-code);
-            font-size: 0.75rem;
-            font-weight: 700;
+        .neural-dots-wave {
             display: flex;
             align-items: center;
-            gap: 6px;
-        }
-
-        .check-item.pending .check-status-badge { color: var(--text-dim); }
-        .check-item.running .check-status-badge { color: var(--accent-cyan); }
-        .check-item.done .check-status-badge { color: var(--accent-green); }
-
-        /* Animated Cyberpunk Typing & Thinking Bubble */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 4px 2px;
-        }
-
-        .neural-wave {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .neural-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            animation: neuralBounce 1.3s infinite ease-in-out both;
+            background: #ffffff;
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
+            animation: neuralBounce 1.2s infinite ease-in-out both;
         }
 
-        .neural-dot:nth-child(1) { animation-delay: -0.32s; background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
-        .neural-dot:nth-child(2) { animation-delay: -0.16s; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
-        .neural-dot:nth-child(3) { animation-delay: 0s; background: var(--accent-purple); box-shadow: 0 0 10px var(--accent-purple); }
+        .neural-dot:nth-child(1) { animation-delay: -0.32s; }
+        .neural-dot:nth-child(2) { animation-delay: -0.16s; }
+        .neural-dot:nth-child(3) { animation-delay: 0s; }
 
         @keyframes neuralBounce {
-            0%, 80%, 100% { transform: scale(0.5) translateY(0); opacity: 0.35; }
-            40% { transform: scale(1.3) translateY(-7px); opacity: 1; }
+            0%, 80%, 100% { transform: scale(0.4) translateY(0); opacity: 0.3; }
+            40% { transform: scale(1.2) translateY(-4px); opacity: 1; }
         }
 
-        .thinking-status-text {
+        .thinking-context-text {
             font-family: var(--font-code);
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            color: var(--accent-green);
+            color: #ffffff;
             letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-
-        .blinking-cursor {
-            display: inline-block;
-            width: 8px;
-            height: 15px;
-            background: var(--accent-green);
-            animation: blink 0.8s infinite;
-            vertical-align: middle;
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
         /* Modals */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(4, 7, 15, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             display: none;
             align-items: center;
@@ -800,17 +812,17 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             border: 1px solid var(--border-light);
             border-radius: 12px;
             width: 90%;
-            max-width: 600px;
+            max-width: 550px;
             max-height: 85vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes modalPop {
-            from { transform: scale(0.92); opacity: 0; }
+            from { transform: scale(0.94); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
 
@@ -822,7 +834,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             justify-content: space-between;
         }
 
-        .modal-header h3 { font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
+        .modal-header h3 { font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
         .modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
 
         .form-group { display: flex; flex-direction: column; gap: 8px; }
@@ -840,8 +852,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0,240,255,0.2);
+            border-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
         }
 
         .form-group textarea { font-family: var(--font-code); font-size: 0.85rem; min-height: 120px; resize: vertical; }
@@ -864,16 +876,38 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="brand">
-            <div class="brand-logo"><i class="fa-solid fa-terminal"></i></div>
+            <div class="brand-logo-phoenix">
+                <!-- SVG Code Phoenix Vector Logo -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2L9 7L12 9L15 7L12 2Z" />
+                    <path d="M3 10L8 12L7 16L2 11L3 10Z" />
+                    <path d="M21 10L16 12L17 16L22 11L21 10Z" />
+                    <path d="M12 11L9 15L12 22L15 15L12 11Z" />
+                    <path d="M6 5L8 9L5 8L6 5Z" />
+                    <path d="M18 5L16 9L19 8L18 5Z" />
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>CODER-KALI</h1>
-                <p>AUTONOMOUS WEB OPS</p>
+                <p>AUTONOMOUS OPERATIONS</p>
             </div>
         </div>
 
         <button class="btn-action btn-new-chat" onclick="startNewSession()">
             <i class="fa-solid fa-plus"></i> NUEVA AUDITORÍA
         </button>
+
+        <!-- Planning Mode Toggle -->
+        <div class="mode-toggle-card">
+            <div class="mode-toggle-label">
+                <i class="fa-solid fa-list-check" style="color: #ffffff;"></i>
+                <span>Modo Plan (Antigravity)</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="planningModeSwitch" onchange="togglePlanningMode()">
+                <span class="slider"></span>
+            </label>
+        </div>
 
         <div class="status-card">
             <div class="status-row">
@@ -894,8 +928,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         </div>
 
         <div class="section-header">
-            <span><i class="fa-solid fa-clock-rotate-left"></i> Sesiones (<span id="sessionCount" style="color: var(--accent-cyan);">0</span>)</span>
-            <button class="btn-del-all" title="Limpiar todas las sesiones" onclick="clearAllSessions()"><i class="fa-solid fa-trash"></i> Vaciar</button>
+            <span><i class="fa-solid fa-clock-rotate-left"></i> Sesiones (<span id="sessionCount" style="color: #ffffff;">0</span>)</span>
+            <button class="btn-del-all" title="Limpiar todas las sesiones" onclick="promptClearAllSessions()"><i class="fa-solid fa-trash"></i> Vaciar</button>
         </div>
 
         <div class="session-list" id="sessionList">
@@ -910,8 +944,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 <div class="badge-pill badge-scope" onclick="openScopeModal()" style="cursor: pointer;">
                     <i class="fa-solid fa-bullseye"></i> ALCANCE: <strong id="topScopeLabel">MODO LIBRE</strong>
                 </div>
-                <div class="badge-pill badge-engine">
-                    <i class="fa-solid fa-bolt"></i> STREAMING SSE ACTIVO
+                <div class="badge-pill badge-engine" id="modeBadge">
+                    <i class="fa-solid fa-bolt"></i> MODO RÁPIDO
                 </div>
             </div>
             <div class="topbar-actions">
@@ -943,11 +977,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         <div class="view-content" id="chatView">
             <div class="chat-stream" id="chatStream">
                 <div class="chat-msg assistant">
-                    <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // NÚCLEO AUTÓNOMO</div>
+                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI // NÚCLEO AUTÓNOMO</div>
                     <div class="msg-body">
-                        ¡Bienvenido a la <strong>Plataforma Visual Autónoma de Coder-Kali</strong>!<br><br>
-                        Ahora las respuestas se procesan con <strong>Streaming en Tiempo Real (SSE)</strong>: verás las respuestas y la terminal de ejecución aparecer inmediatamente.<br>
-                        Escribe tu objetivo abajo o utiliza el <strong>Scanner Visual</strong> en el menú lateral.
+                        ¡Bienvenido a <strong>Coder-Kali</strong>!<br><br>
+                        Sistema de auditoría de seguridad y reconocimiento de infraestructura.<br>
+                        Escribe tu objetivo abajo o activa el <strong>Modo Plan</strong> en el panel lateral.
                     </div>
                 </div>
             </div>
@@ -955,10 +989,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             <!-- Input Bar -->
             <div class="input-container">
                 <div class="input-box">
-                    <i class="fa-solid fa-chevron-right" style="color: var(--accent-green); margin-right: 8px;"></i>
+                    <i class="fa-solid fa-chevron-right" style="color: #ffffff; margin-right: 8px;"></i>
                     <input type="text" id="promptInput" placeholder="Ej: Realiza un reconocimiento completo de arquitectura y cabeceras en binsperu.pe..." onkeypress="handleKey(event)">
                     <button class="btn-submit" id="submitBtn" onclick="submitPrompt()">
-                        <span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>
+                        <span>EJECUTAR</span> <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
@@ -967,41 +1001,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         <!-- Recon Scanner Visual View -->
         <div class="recon-view" id="reconView">
             <div class="recon-header">
-                <i class="fa-solid fa-crosshairs" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
+                <i class="fa-solid fa-crosshairs" style="color: #ffffff; font-size: 1.2rem;"></i>
                 <input type="text" id="reconTargetInput" placeholder="Ingresa un dominio o IP objetivo (ej. binsperu.pe)...">
                 <button class="btn-submit" id="btnRunScan" onclick="runVisualScan()"><i class="fa-solid fa-radar"></i> LANZAR ESCANEO 360°</button>
             </div>
-
-            <!-- Live Mission Checklist -->
-            <div class="mission-checklist" id="reconChecklist" style="display: none;">
-                <div class="mission-checklist-header">
-                    <span><i class="fa-solid fa-list-check"></i> PROGRESO DE LA MISIÓN TÁCTICA</span>
-                    <span id="reconOverallStatus" style="color: var(--accent-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> EJECUTANDO TAREAS</span>
-                </div>
-                <div class="checklist-items">
-                    <div class="check-item pending" id="chkDns">
-                        <span><i class="fa-solid fa-network-wired"></i> 1. Resolución DNS y Red</span>
-                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                    </div>
-                    <div class="check-item pending" id="chkWaf">
-                        <span><i class="fa-solid fa-shield-virus"></i> 2. Detección WAF y Cabeceras</span>
-                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                    </div>
-                    <div class="check-item pending" id="chkTech">
-                        <span><i class="fa-solid fa-globe"></i> 3. Tecnologías y CMS</span>
-                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                    </div>
-                    <div class="check-item pending" id="chkPorts">
-                        <span><i class="fa-solid fa-microchip"></i> 4. Puertos Nmap</span>
-                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                    </div>
-                    <div class="check-item pending" id="chkSubs">
-                        <span><i class="fa-solid fa-sitemap"></i> 5. Subdominios</span>
-                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                    </div>
-                </div>
-            </div>
-
             <div class="recon-grid">
                 <div class="recon-card">
                     <h4><i class="fa-solid fa-network-wired"></i> Puertos y Servicios (Nmap)</h4>
@@ -1023,11 +1026,32 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Modal: Confirmación Personalizada de Eliminación -->
+    <div class="modal-overlay" id="confirmDeleteModal">
+        <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-trash-can" style="color: var(--accent-red);"></i> Confirmar Eliminación</h3>
+                <button class="btn-icon" onclick="closeModal('confirmDeleteModal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="gap: 14px;">
+                <p id="confirmDeleteText" style="font-size: 0.95rem; color: #e2e8f0;">¿Deseas eliminar esta sesión permanentemente?</p>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-muted); cursor: pointer;">
+                    <input type="checkbox" id="chkSkipDeleteConfirm">
+                    <span>No volver a preguntar</span>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-tab" onclick="closeModal('confirmDeleteModal')">Cancelar</button>
+                <button class="btn-action" style="background: var(--accent-red); color: #fff;" onclick="executeConfirmedDelete()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Configuración de IA -->
     <div class="modal-overlay" id="configModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i> Configuración de IA y Proveedores</h3>
+                <h3><i class="fa-solid fa-sliders" style="color: #ffffff;"></i> Configuración de IA y Proveedores</h3>
                 <button class="btn-icon" onclick="closeModal('configModal')"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
@@ -1070,7 +1094,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <div class="modal-overlay" id="scopeModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-crosshairs" style="color: var(--accent-purple);"></i> Documento de Alcance (SOW / ROE)</h3>
+                <h3><i class="fa-solid fa-crosshairs" style="color: #ffffff;"></i> Documento de Alcance (SOW / ROE)</h3>
                 <button class="btn-icon" onclick="closeModal('scopeModal')"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
@@ -1092,6 +1116,23 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
     <script>
         let currentSessionId = null;
+        let isPlanningMode = false;
+        let pendingDeleteId = null;
+        let isDeleteAllAction = false;
+
+        function togglePlanningMode() {
+            isPlanningMode = document.getElementById('planningModeSwitch').checked;
+            const badge = document.getElementById('modeBadge');
+            if (isPlanningMode) {
+                badge.innerHTML = '<i class="fa-solid fa-list-check"></i> MODO PLANIFICACIÓN ACTIVO';
+                badge.style.borderColor = '#ffffff';
+                badge.style.color = '#ffffff';
+            } else {
+                badge.innerHTML = '<i class="fa-solid fa-bolt"></i> MODO RÁPIDO';
+                badge.style.borderColor = 'var(--accent-green)';
+                badge.style.color = 'var(--accent-green)';
+            }
+        }
 
         function switchView(view) {
             document.getElementById('tabBtnChat').classList.toggle('active', view === 'chat');
@@ -1123,8 +1164,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     item.onclick = () => loadSession(s.id);
                     item.innerHTML = `
                         <div class="session-item-row">
-                            <div class="s-title"><i class="fa-regular fa-message" style="color: var(--accent-cyan); margin-right: 6px;"></i>${escapeHtml(s.title)}</div>
-                            <button class="btn-del-session" title="Eliminar sesión" onclick="deleteSession(event, '${s.id}')"><i class="fa-solid fa-trash-can"></i></button>
+                            <div class="s-title"><i class="fa-regular fa-message" style="color: #ffffff; margin-right: 6px;"></i>${escapeHtml(s.title)}</div>
+                            <button class="btn-del-session" title="Eliminar sesión" onclick="promptDeleteSession(event, '${s.id}')"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                         <div class="s-meta">
                             <span>${s.model.split('/').pop()}</span>
@@ -1136,9 +1177,42 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             } catch (e) { console.error(e); }
         }
 
-        async function deleteSession(e, id) {
+        function promptDeleteSession(e, id) {
             e.stopPropagation();
-            if (!confirm("¿Deseas eliminar permanentemente esta sesión?")) return;
+            if (localStorage.getItem('coderkali_skip_delete_confirm') === 'true') {
+                performDeleteSession(id);
+                return;
+            }
+            pendingDeleteId = id;
+            isDeleteAllAction = false;
+            document.getElementById('confirmDeleteText').innerText = '¿Deseas eliminar permanentemente esta sesión del historial?';
+            openModal('confirmDeleteModal');
+        }
+
+        function promptClearAllSessions() {
+            if (localStorage.getItem('coderkali_skip_delete_confirm') === 'true') {
+                performClearAllSessions();
+                return;
+            }
+            isDeleteAllAction = true;
+            document.getElementById('confirmDeleteText').innerText = '¿Deseas vaciar TODO el historial de sesiones guardadas?';
+            openModal('confirmDeleteModal');
+        }
+
+        async function executeConfirmedDelete() {
+            if (document.getElementById('chkSkipDeleteConfirm').checked) {
+                localStorage.setItem('coderkali_skip_delete_confirm', 'true');
+            }
+            closeModal('confirmDeleteModal');
+
+            if (isDeleteAllAction) {
+                await performClearAllSessions();
+            } else if (pendingDeleteId) {
+                await performDeleteSession(pendingDeleteId);
+            }
+        }
+
+        async function performDeleteSession(id) {
             try {
                 await fetch(`/api/sessions?action=delete&id=${id}`, { method: 'POST' });
                 if (currentSessionId === id) {
@@ -1147,17 +1221,16 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     loadSessions();
                 }
             } catch (err) {
-                alert("Error al eliminar sesión: " + err);
+                console.error(err);
             }
         }
 
-        async function clearAllSessions() {
-            if (!confirm("¿Deseas vaciar TODO el historial de sesiones guardadas?")) return;
+        async function performClearAllSessions() {
             try {
                 await fetch('/api/sessions?action=clear_all', { method: 'POST' });
                 startNewSession();
             } catch (err) {
-                alert("Error al vaciar historial: " + err);
+                console.error(err);
             }
         }
 
@@ -1184,7 +1257,19 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
             let formatted = rawContent;
 
-            // 1. Formatear etiquetas XML <ejecutar_comando>
+            // 1. Detectar Plan de Acción XML y renderizar tarjeta con botón PROCEED
+            formatted = formatted.replace(/<plan_de_accion>([\s\S]*?)<\/plan_de_accion>/g, function(match, planText) {
+                return `<div class="plan-card">
+                    <div class="plan-card-header">
+                        <h3><i class="fa-solid fa-list-check"></i> PLAN DE IMPLEMENTACIÓN TÁCTICO</h3>
+                        <span class="badge-pill badge-engine">ESPERANDO AUTORIZACIÓN</span>
+                    </div>
+                    <div class="plan-card-content">${escapeHtml(planText.trim())}</div>
+                    <button class="btn-proceed" onclick="proceedWithPlan()"><i class="fa-solid fa-bolt"></i> PROCEED / AUTORIZAR Y EJECUTAR</button>
+                </div>`;
+            });
+
+            // 2. Formatear etiquetas XML <ejecutar_comando>
             formatted = formatted.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
                 return `<div class="terminal-box">
                     <div class="terminal-box-header">
@@ -1195,7 +1280,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 </div>`;
             });
 
-            // 2. Formatear llamadas JSON crudas (ej: {"cmd": ["bash", "-lc", "..."]})
+            // 3. Formatear llamadas JSON crudas (ej: {"cmd": ["bash", "-lc", "..."]})
             formatted = formatted.replace(/\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(\[[^\]]*\]|"[^"]*")[^{}]*\}/g, function(match) {
                 try {
                     let parsed = JSON.parse(match);
@@ -1226,7 +1311,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             formatted = formatted.replace(/\n/g, '<br>');
 
             msgDiv.innerHTML = `
-                <div class="msg-header">${role === 'user' ? '<i class="fa-solid fa-user-ninja"></i> OPERADOR' : '<i class="fa-solid fa-robot"></i> CODER-KALI'}</div>
+                <div class="msg-header">${role === 'user' ? '<i class="fa-solid fa-user-shield"></i> OPERADOR' : '<i class="fa-solid fa-shield-halved"></i> CODER-KALI'}</div>
                 <div class="msg-body">${formatted}</div>
             `;
             stream.appendChild(msgDiv);
@@ -1237,74 +1322,34 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        function updateCheckItem(id, state, customText) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.className = `check-item ${state}`;
-            const badge = el.querySelector('.check-status-badge');
-            if (!badge) return;
-
-            if (state === 'pending') {
-                badge.innerHTML = `<i class="fa-regular fa-circle"></i> ${customText || 'PENDIENTE'}`;
-            } else if (state === 'running') {
-                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${customText || 'EN CURSO...'}`;
-            } else if (state === 'done') {
-                badge.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--accent-green);"></i> ${customText || 'LOGRADO ✓'}`;
-            }
-        }
-
-        function showThinkingBubble() {
+        function showThinkingBubble(promptText) {
             const stream = document.getElementById('chatStream');
             removeThinkingBubble();
+
+            // Extraer dinámicamente el objetivo o acción del prompt
+            let targetLabel = "OBJETIVO";
+            const urlMatch = promptText.match(/(?:https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+            if (urlMatch) {
+                targetLabel = urlMatch[1];
+            } else if (promptText.length < 30) {
+                targetLabel = promptText;
+            }
 
             const msgDiv = document.createElement('div');
             msgDiv.id = 'thinkingBubble';
             msgDiv.className = 'chat-msg assistant';
             msgDiv.innerHTML = `
-                <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // AUDITORÍA EN TIEMPO REAL</div>
-                <div class="msg-body" style="background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div class="checklist-items" style="grid-template-columns: 1fr; gap: 6px;">
-                            <div class="check-item running" id="tbStep1">
-                                <span><i class="fa-solid fa-crosshairs"></i> 1. Análisis de Objetivo e Inteligencia de Red</span>
-                                <span class="check-status-badge"><i class="fa-solid fa-spinner fa-spin"></i> EN CURSO...</span>
-                            </div>
-                            <div class="check-item pending" id="tbStep2">
-                                <span><i class="fa-solid fa-shield-halved"></i> 2. Evaluación de WAF, Puertos y Tecnologías</span>
-                                <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                            </div>
-                            <div class="check-item pending" id="tbStep3">
-                                <span><i class="fa-solid fa-radiation"></i> 3. Diagnóstico Top 10 Vectores de Riesgo OWASP</span>
-                                <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
-                            </div>
-                        </div>
-                        <div class="typing-indicator" style="margin-top: 4px;">
-                            <div class="neural-wave">
-                                <div class="neural-dot"></div>
-                                <div class="neural-dot"></div>
-                                <div class="neural-dot"></div>
-                            </div>
-                            <div class="thinking-status-text">
-                                <span id="telemetryStatus">RECOPILANDO INTELIGENCIA TÁCTICA...</span>
-                                <span class="blinking-cursor"></span>
-                            </div>
-                        </div>
+                <div class="minimal-thinking">
+                    <div class="neural-dots-wave">
+                        <div class="neural-dot"></div>
+                        <div class="neural-dot"></div>
+                        <div class="neural-dot"></div>
                     </div>
+                    <span class="thinking-context-text">Analizando ${escapeHtml(targetLabel)}...</span>
                 </div>
             `;
             stream.appendChild(msgDiv);
             stream.scrollTop = stream.scrollHeight;
-
-            // Simular progresión en vivo de tareas logradas
-            setTimeout(() => {
-                updateCheckItem('tbStep1', 'done', 'LOGRADO ✓');
-                updateCheckItem('tbStep2', 'running', 'EJECUTANDO...');
-            }, 1200);
-
-            setTimeout(() => {
-                updateCheckItem('tbStep2', 'done', 'LOGRADO ✓');
-                updateCheckItem('tbStep3', 'running', 'SINTETIZANDO...');
-            }, 2600);
         }
 
         function removeThinkingBubble() {
@@ -1319,17 +1364,21 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
             input.value = '';
             renderBubble('user', text);
-            showThinkingBubble();
+            showThinkingBubble(text);
 
             const btn = document.getElementById('submitBtn');
-            btn.innerHTML = '<div class="spinner"></div> <span>PROCESANDO</span>';
+            btn.innerHTML = '<div class="spinner"></div>';
             btn.disabled = true;
 
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, session_id: currentSessionId })
+                    body: JSON.stringify({
+                        prompt: text,
+                        session_id: currentSessionId,
+                        planning_mode: isPlanningMode
+                    })
                 });
                 const data = await res.json();
                 removeThinkingBubble();
@@ -1340,9 +1389,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 removeThinkingBubble();
                 renderBubble('assistant', 'Error de comunicación: ' + e);
             } finally {
-                btn.innerHTML = '<span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>';
+                btn.innerHTML = '<span>EJECUTAR</span> <i class="fa-solid fa-arrow-right"></i>';
                 btn.disabled = false;
             }
+        }
+
+        function proceedWithPlan() {
+            const input = document.getElementById('promptInput');
+            input.value = "Proceder y ejecutar el plan táctico autorizado paso a paso.";
+            submitPrompt();
         }
 
         async function runVisualScan() {
@@ -1351,16 +1406,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 alert('Por favor ingresa un dominio o IP.');
                 return;
             }
-
-            const cl = document.getElementById('reconChecklist');
-            cl.style.display = 'flex';
-            document.getElementById('reconOverallStatus').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> EJECUTANDO MISIONES EN PARALELO...';
-
-            updateCheckItem('chkDns', 'running', 'RESOLVIENDO...');
-            updateCheckItem('chkWaf', 'running', 'ANALIZANDO...');
-            updateCheckItem('chkTech', 'running', 'INSPECCIONANDO...');
-            updateCheckItem('chkPorts', 'running', 'ESCANEANDO...');
-            updateCheckItem('chkSubs', 'running', 'ENUMERANDO...');
 
             document.getElementById('rcNmap').innerText = "Ejecutando Nmap port scan en tiempo real...";
             document.getElementById('rcWhatWeb').innerText = "Inspeccionando tecnologías web...";
@@ -1374,14 +1419,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     body: JSON.stringify({ target: target })
                 });
                 const data = await res.json();
-
-                updateCheckItem('chkDns', 'done', 'LOGRADO ✓');
-                updateCheckItem('chkWaf', 'done', 'LOGRADO ✓');
-                updateCheckItem('chkTech', 'done', 'LOGRADO ✓');
-                updateCheckItem('chkPorts', 'done', 'LOGRADO ✓');
-                updateCheckItem('chkSubs', 'done', 'LOGRADO ✓');
-
-                document.getElementById('reconOverallStatus').innerHTML = '<span style="color: var(--accent-green);"><i class="fa-solid fa-circle-check"></i> MISIÓN 360° COMPLETADA CON ÉXITO</span>';
 
                 document.getElementById('rcNmap').innerText = data.nmap || 'Completado sin salida.';
                 document.getElementById('rcWhatWeb').innerText = data.whatweb || 'Completado sin salida.';
@@ -1409,8 +1446,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             const stream = document.getElementById('chatStream');
             stream.innerHTML = `
                 <div class="chat-msg assistant">
-                    <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI</div>
-                    <div class="msg-body">Nueva sesión iniciada. ¿Cuál es el siguiente objetivo?</div>
+                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI</div>
+                    <div class="msg-body">Nueva sesión táctica iniciada. ¿Cuál es el objetivo?</div>
                 </div>
             `;
             loadSessions();
@@ -1632,6 +1669,7 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
         if path == "/api/chat":
             prompt = data.get("prompt", "")
             session_id = data.get("session_id")
+            planning_mode = data.get("planning_mode", False)
 
             config_mgr = ConfigManager()
             session_mgr = SessionManager()
@@ -1646,6 +1684,7 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
                 session_mgr=session_mgr,
                 scope_mgr=scope_mgr,
                 session_id=session_id,
+                planning_mode=planning_mode,
             )
 
             # Limitar iteraciones automáticas por turno en la web para máxima velocidad
@@ -1768,7 +1807,7 @@ def start_web_server(port: int = 7777, open_browser: bool = True):
         httpd = HTTPServer(server_address, CoderKaliHTTPHandler)
 
     url = f"http://localhost:{port}"
-    console.print(f"\n[bold green]⚡ Centro de Operaciones Web de Coder-Kali Activo:[/bold green] [bold cyan]{url}[/bold cyan]")
+    console.print(f"\n[bold white]⚡ Centro de Operaciones Coder-Kali Activo:[/bold white] [bold cyan]{url}[/bold cyan]")
     console.print("[dim]Presiona Ctrl+C en esta terminal para detener el servidor.[/dim]\n")
 
     if open_browser:

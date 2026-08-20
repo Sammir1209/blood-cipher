@@ -79,3 +79,21 @@ contenido del archivo aquí
 PROMPT_RESUMEN_EJECUCION = """
 Interpreta la salida de la ejecución anterior para el usuario. Destaca datos de IP, Host, Servidor, Cabeceras y los 10 vectores de vulnerabilidad identificados, proponiendo el siguiente paso lógico.
 """
+
+PROMPT_PLANNING_MODE = """
+[MODO DE PLANIFICACIÓN ACTIVO (PLANNING MODE)]
+El operador ha activado el Modo Plan.
+1. Antes de ejecutar acciones directas o comandos en el sistema, debes estructurar y presentar primero un PLAN DE ACCIÓN FORMAL dentro de la etiqueta XML:
+<plan_de_accion>
+### 📋 PLAN DE IMPLEMENTACIÓN TÁCTICO: [OBJETIVO]
+**1. Objetivo Principal:**
+**2. Fases de Ejecución:**
+  - Fase 1: Recolección pasiva y reconocimiento de red
+  - Fase 2: Mapeo de superficie de ataque y escaneo de puertos
+  - Fase 3: Análisis de vulnerabilidades y verificación de vectores
+**3. Comandos Previstos a Ejecutar:**
+**4. Resultados Esperados y Mitigaciones:**
+</plan_de_accion>
+2. Solicita al operador que confirme y autorice el plan haciendo clic en el botón '⚡ PROCEED'.
+3. NO ejecutes comandos dentro de <ejecutar_comando> en este turno hasta que el operador presione 'PROCEED'.
+"""

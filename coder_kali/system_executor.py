@@ -353,7 +353,9 @@ class SystemExecutor:
     def process_action(self, action: ParsedAction) -> ExecutionResult:
         """Procesa una acción individual (comando o archivo) gestionando la confirmación."""
         if action.action_type == "command":
-            if self.auto_approve_safe and not action.is_dangerous:
+            # Comandos normales (no sudo y no críticos) se ejecutan automáticamente sin interrumpir
+            requires_confirmation = action.is_sudo or action.is_dangerous
+            if not requires_confirmation:
                 authorized = True
             else:
                 authorized = self.confirm_command(
@@ -364,7 +366,7 @@ class SystemExecutor:
             if not authorized:
                 return ExecutionResult(
                     success=False,
-                    output="[RECHAZADO] El operador canceló la ejecución del comando.",
+                    output="[RECHAZADO] El operador canceló la ejecución del comando de superusuario.",
                     returncode=130,
                     command=action.content,
                     was_rejected=True,
