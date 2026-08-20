@@ -26,7 +26,7 @@ BANNER_ART = r"""
 """
 
 
-def print_banner(version: str = "1.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash"):
+def print_banner(version: str = "1.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None):
     """Imprime el banner principal estilo hacker/cyberpunk con metadata de sesión."""
     console.print(f"[bold bright_cyan]{BANNER_ART}[/bold bright_cyan]")
 
@@ -37,8 +37,9 @@ def print_banner(version: str = "1.0.0", provider: str = "gemini", model: str = 
     info_table.add_row("⚡ Versión:", f"v{version} [Linux Native]")
     info_table.add_row("🤖 Proveedor IA:", f"[cyan]{provider.upper()}[/cyan]")
     info_table.add_row("🧠 Modelo Activo:", f"[yellow]{model}[/yellow]")
+    info_table.add_row("🎯 Alcance / SOW:", f"[bold green]{scope}[/bold green]" if scope else "[dim]No definido ('scope' para cargar)[/dim]")
     info_table.add_row("🛡️  Modo de Seguridad:", "[green]Supervisión PTY Activa[/green]")
-    info_table.add_row("💡 Comandos Rápidos:", "[dim]escribe 'exit', 'clear', 'config' o 'ayuda'[/dim]")
+    info_table.add_row("💡 Comandos Rápidos:", "[dim]escribe 'exit', 'scope', 'config', 'clear' o 'ayuda'[/dim]")
 
     panel = Panel(
         info_table,

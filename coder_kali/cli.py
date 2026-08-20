@@ -6,6 +6,7 @@ Punto de entrada de la aplicación para chat interactivo, configuración, ejecuc
 import os
 import sys
 import shutil
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 import typer
 from rich.console import Console
@@ -14,14 +15,17 @@ from rich.prompt import Prompt
 from coder_kali import __version__
 from coder_kali.config import ConfigManager
 from coder_kali.agent import KaliAgent
-from coder_kali.system_executor import SystemExecutor
 from coder_kali.session_manager import SessionManager, ChatSession
+from coder_kali.scope_manager import ScopeManager
+from coder_kali.system_executor import SystemExecutor
+from coder_kali.tools_database import KaliToolsDatabase
 from coder_kali.ui.chat_render import (
     print_banner,
     render_user_message,
     render_error,
     render_info,
     render_system_status,
+    render_ai_message,
 )
 from coder_kali.ui.config_menus import interactive_config_wizard, test_provider_connection
 
@@ -69,6 +73,102 @@ def prompt_session_selection(session_mgr: SessionManager) -> Optional[str]:
     return chosen
 
 
+def interactive_scope_menu(scope_mgr: ScopeManager):
+    """Menú interactivo para gestionar documentos de alcance (SOW) y autorizaciones de seguridad."""
+    import questionary
+    from rich.panel import Panel
+    from rich.markdown import Markdown
+
+    while True:
+        active = scope_mgr.get_active_scope_name()
+        active_str = f"[bold green]{active}[/bold green]" if active else "[dim]Ninguno (Modo Libre)[/dim]"
+        console.print(f"\n[bold cyan]🎯 Gestor de Alcance y Autorización (SOW / ROE)[/bold cyan] | Activo: {active_str}")
+
+        action = questionary.select(
+            "¿Qué acción deseas realizar con los documentos de alcance?",
+            choices=[
+                questionary.Choice("👁️  Ver contenido del Scope activo", value="VIEW"),
+                questionary.Choice("🔄 Cambiar / Activar un Scope existente", value="SELECT"),
+                questionary.Choice("📥 Importar Scope desde un archivo (.md / .txt)", value="IMPORT"),
+                questionary.Choice("✍️  Crear / Pegar nuevo Scope manualmente", value="CREATE"),
+                questionary.Choice("❌ Desactivar Scope actual (Modo Libre)", value="CLEAR"),
+                questionary.Choice("🗑️  Eliminar un documento de Scope", value="DELETE"),
+                questionary.Choice("🔙 Volver al chat", value="BACK"),
+            ]
+        ).ask()
+
+        if not action or action == "BACK":
+            break
+
+        if action == "VIEW":
+            content = scope_mgr.get_active_scope_content()
+            if content:
+                console.print(Panel(Markdown(content), title=f"[bold green]🎯 Alcance Activo: {active}[/bold green]", border_style="green"))
+            else:
+                console.print("[yellow][!] No hay ningún documento de alcance activo actualmente.[/yellow]")
+
+        elif action == "SELECT":
+            scopes = scope_mgr.list_scopes()
+            if not scopes:
+                console.print("[yellow][i] No hay documentos de alcance guardados aún.[/yellow]")
+                continue
+            choices = [questionary.Choice(f"📄 {s['name']}  [dim]({s['preview']})[/dim]", value=s["name"]) for s in scopes]
+            chosen_scope = questionary.select("Elige el alcance a activar:", choices=choices).ask()
+            if chosen_scope:
+                scope_mgr.set_active_scope(chosen_scope)
+                console.print(f"[bold green][✓] Alcance activado:[/bold green] [bold white]{chosen_scope}[/bold white]")
+
+        elif action == "IMPORT":
+            file_path_str = questionary.text("Ingresa la ruta absoluta o relativa al archivo (.md o .txt):").ask()
+            if file_path_str:
+                p = Path(file_path_str.strip()).expanduser()
+                if p.exists() and p.is_file():
+                    try:
+                        content = p.read_text(encoding="utf-8")
+                        name = p.stem
+                        saved_name = scope_mgr.save_scope(name, content)
+                        scope_mgr.set_active_scope(saved_name)
+                        console.print(f"[bold green][✓] Scope '{saved_name}' importado y activado exitosamente.[/bold green]")
+                    except Exception as e:
+                        console.print(f"[bold red][!] Error al leer el archivo: {e}[/bold red]")
+                else:
+                    console.print(f"[bold red][!] El archivo '{file_path_str}' no existe.[/bold red]")
+
+        elif action == "CREATE":
+            name = questionary.text("Nombre del objetivo o proyecto (ej. binsperu_audit):").ask()
+            if name:
+                console.print("[cyan][*] Ingresa el texto o documento SOW (finaliza escribiendo 'FIN' en una línea vacía):[/cyan]")
+                lines = []
+                while True:
+                    try:
+                        line = input()
+                        if line.strip() == "FIN":
+                            break
+                        lines.append(line)
+                    except (KeyboardInterrupt, EOFError):
+                        break
+                content = "\n".join(lines)
+                if content.strip():
+                    saved = scope_mgr.save_scope(name, content)
+                    scope_mgr.set_active_scope(saved)
+                    console.print(f"[bold green][✓] Scope '{saved}' guardado y activado.[/bold green]")
+
+        elif action == "CLEAR":
+            scope_mgr.clear_active_scope()
+            console.print("[bold yellow][✓] Alcance desactivado. Coder-Kali vuelve a operar en modo libre.[/bold yellow]")
+
+        elif action == "DELETE":
+            scopes = scope_mgr.list_scopes()
+            if not scopes:
+                console.print("[yellow]No hay scopes para eliminar.[/yellow]")
+                continue
+            choices = [questionary.Choice(s["name"], value=s["name"]) for s in scopes]
+            to_del = questionary.select("Elige el scope a eliminar:", choices=choices).ask()
+            if to_del:
+                scope_mgr.delete_scope(to_del)
+                console.print(f"[bold green][✓] Scope '{to_del}' eliminado.[/bold green]")
+
+
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
@@ -91,6 +191,7 @@ def chat(
     """Modo conversacional interactivo con terminal enriquecida."""
     config_mgr = ConfigManager()
     session_mgr = SessionManager()
+    scope_mgr = ScopeManager()
 
     # Si no está configurado, ofrecer wizard inicial
     if not config_mgr.is_configured():
@@ -107,9 +208,10 @@ def chat(
 
     provider = config_mgr.get_active_provider()
     model = config_mgr.get_active_model()
-    print_banner(version=__version__, provider=provider, model=model)
+    active_scope_name = scope_mgr.get_active_scope_name()
+    print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name)
 
-    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, session_id=selected_session_id)
+    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=selected_session_id)
 
     if selected_session_id and agent.current_session:
         user_msgs = [m for m in agent.messages if m.get("role") == "user" and not m.get("content", "").startswith("[RESULTADOS_SISTEMA")]
@@ -121,7 +223,6 @@ def chat(
             if msg.get("role") == "user":
                 render_user_message(msg.get("content", "").split("\n\n[REFERENCIA")[0])
             elif msg.get("role") == "assistant":
-                from coder_kali.ui.chat_render import render_ai_message
                 render_ai_message(msg.get("content", ""))
 
     while True:
@@ -137,28 +238,35 @@ def chat(
                 break
             elif cleaned_cmd in ["clear", "cls", "limpiar"]:
                 os.system("clear" if os.name != "nt" else "cls")
-                print_banner(version=__version__, provider=provider, model=model)
+                active_scope_name = scope_mgr.get_active_scope_name()
+                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name)
                 continue
             elif cleaned_cmd in ["new", "nuevo", "reset", "reiniciar"]:
-                agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr)
+                agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr)
                 console.print("[bold green][✓] Nueva sesión iniciada (historial anterior guardado).[/bold green]")
                 continue
             elif cleaned_cmd in ["historial", "history", "sesiones"]:
                 sid = prompt_session_selection(session_mgr)
                 if sid:
-                    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, session_id=sid)
+                    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=sid)
                     console.print(f"[bold green][✓] Sesión '{agent.current_session.title}' cargada exitosamente.[/bold green]")
+                continue
+            elif cleaned_cmd in ["scope", "alcance", "sow", "roe"]:
+                interactive_scope_menu(scope_mgr)
+                # Actualizar prompt del agente en vivo
+                agent.reset_conversation()
                 continue
             elif cleaned_cmd in ["config", "configurar"]:
                 interactive_config_wizard(config_mgr)
                 provider = config_mgr.get_active_provider()
                 model = config_mgr.get_active_model()
-                agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, session_id=agent.current_session.id)
+                agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=agent.current_session.id)
                 continue
             elif cleaned_cmd in ["ayuda", "help"]:
                 console.print("""
 [bold cyan]Comandos de la sesión:[/bold cyan]
   [green]exit / quit[/green]     - Guardar y salir de Coder-Kali
+  [green]scope[/green]           - Gestionar y cargar documentos de alcance (SOW / ROE)
   [green]historial[/green]       - Ver y cambiar entre chats anteriores
   [green]new / nuevo[/green]     - Iniciar un nuevo chat limpio
   [green]clear[/green]           - Limpiar la pantalla de la terminal
@@ -229,6 +337,56 @@ def history(
 
     console.print(table)
     console.print("\n[dim]Para reanudar un chat específico ejecuta: coder-kali (y selecciónalo del menú interactivo)[/dim]")
+
+
+@app.command(name="scope", help="🎯 Administra documentos de alcance de trabajo (SOW / ROE) y autorizaciones.")
+def scope_command(
+    set_scope: Optional[str] = typer.Option(None, "--set", "-s", help="Activar un scope por nombre."),
+    clear: bool = typer.Option(False, "--clear", "-c", help="Desactivar el scope activo (volver a modo libre)."),
+    show: bool = typer.Option(False, "--show", help="Muestra el contenido del scope activo."),
+    import_file: Optional[str] = typer.Option(None, "--import", "-i", help="Importar un archivo de alcance (.md o .txt)."),
+):
+    """Gestor de alcance y documentos de autorización de seguridad."""
+    from rich.panel import Panel
+    from rich.markdown import Markdown
+    from rich.table import Table
+
+    scope_mgr = ScopeManager()
+
+    if clear:
+        scope_mgr.clear_active_scope()
+        console.print("[bold yellow][✓] Alcance desactivado. Coder-Kali vuelve a operar en modo libre.[/bold yellow]")
+        return
+
+    if set_scope:
+        if scope_mgr.set_active_scope(set_scope):
+            console.print(f"[bold green][✓] Alcance activado:[/bold green] [bold white]{set_scope}[/bold white]")
+        else:
+            console.print(f"[bold red][!] No existe ningún scope con el nombre '{set_scope}'.[/bold red]")
+        return
+
+    if import_file:
+        p = Path(import_file).expanduser()
+        if p.exists() and p.is_file():
+            content = p.read_text(encoding="utf-8")
+            saved = scope_mgr.save_scope(p.stem, content)
+            scope_mgr.set_active_scope(saved)
+            console.print(f"[bold green][✓] Scope '{saved}' importado y activado exitosamente.[/bold green]")
+        else:
+            console.print(f"[bold red][!] El archivo '{import_file}' no existe.[/bold red]")
+        return
+
+    if show:
+        content = scope_mgr.get_active_scope_content()
+        name = scope_mgr.get_active_scope_name()
+        if content:
+            console.print(Panel(Markdown(content), title=f"[bold green]🎯 Alcance Activo: {name}[/bold green]", border_style="green"))
+        else:
+            console.print("[yellow][!] No hay ningún alcance activo actualmente.[/yellow]")
+        return
+
+    # Si no se pasó ningún flag, abrir el menú interactivo
+    interactive_scope_menu(scope_mgr)
 
 
 @app.command(name="run", help="Ejecuta una instrucción directa en una sola línea sin entrar al chat.")

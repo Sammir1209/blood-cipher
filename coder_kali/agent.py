@@ -18,6 +18,7 @@ from coder_kali.prompts import MEGA_PROMPT_SISTEMA
 from coder_kali.system_executor import SystemExecutor, ExecutionResult
 from coder_kali.tools_database import KaliToolsDatabase
 from coder_kali.session_manager import SessionManager, ChatSession
+from coder_kali.scope_manager import ScopeManager
 from coder_kali.ui.chat_render import (
     render_ai_message,
     render_execution_result,
@@ -36,6 +37,7 @@ class KaliAgent:
         system_executor: Optional[SystemExecutor] = None,
         tools_db: Optional[KaliToolsDatabase] = None,
         session_mgr: Optional[SessionManager] = None,
+        scope_mgr: Optional[ScopeManager] = None,
         session_id: Optional[str] = None,
         custom_system_prompt: Optional[str] = None,
     ):
@@ -43,6 +45,7 @@ class KaliAgent:
         self.executor = system_executor or SystemExecutor()
         self.tools_db = tools_db or KaliToolsDatabase()
         self.session_mgr = session_mgr or SessionManager()
+        self.scope_mgr = scope_mgr or ScopeManager()
         self.system_prompt = custom_system_prompt or MEGA_PROMPT_SISTEMA
         self.messages: List[Dict[str, str]] = []
         self.max_tool_iterations = 10
@@ -54,7 +57,7 @@ class KaliAgent:
             loaded_sess = self.session_mgr.get_session(session_id)
             if loaded_sess:
                 self.current_session = loaded_sess
-                self.messages = list(loaded_sess.messages) if loaded_sess.messages else [{"role": "system", "content": self.system_prompt}]
+                self.messages = list(loaded_sess.messages) if loaded_sess.messages else [{"role": "system", "content": self._get_effective_system_prompt()}]
             else:
                 self.current_session = self.session_mgr.create_session(provider, model)
                 self.reset_conversation()
@@ -62,9 +65,24 @@ class KaliAgent:
             self.current_session = self.session_mgr.create_session(provider, model)
             self.reset_conversation()
 
+    def _get_effective_system_prompt(self) -> str:
+        """Construye el prompt de sistema enriquecido con el documento de alcance (SOW) activo si existe."""
+        prompt = self.system_prompt
+        active_scope = self.scope_mgr.get_active_scope_content()
+        if active_scope:
+            scope_name = self.scope_mgr.get_active_scope_name() or "Documento de Alcance"
+            prompt += (
+                f"\n\n[DOCUMENTO DE AUTORIZACIÓN Y ALCANCE DE TRABAJO (SOW / ROE: {scope_name})]\n"
+                "El operador cuenta con autorización formal, expresa y por escrito para la siguiente auditoría de seguridad:\n"
+                f"\"\"\"\n{active_scope}\n\"\"\"\n"
+                "Instrucción: Procede con las pruebas de seguridad autorizadas dentro del alcance (In-Scope) "
+                "y respeta estrictamente los límites y exclusiones (Out-of-Scope) definidos en este acuerdo."
+            )
+        return prompt
+
     def reset_conversation(self):
         """Reinicia el historial de mensajes con el Mega-Prompt del sistema."""
-        self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.messages = [{"role": "system", "content": self._get_effective_system_prompt()}]
         self.current_session.messages = list(self.messages)
         self.session_mgr.save_session(self.current_session)
 
@@ -73,11 +91,12 @@ class KaliAgent:
         Genera una versión optimizada del historial para la API sin destruir
         la memoria persistente de la sesión del usuario.
         """
+        effective_sys = self._get_effective_system_prompt()
         if not self.messages:
-            return [{"role": "system", "content": self.system_prompt}]
+            return [{"role": "system", "content": effective_sys}]
 
-        # Asegurar que el mensaje de sistema esté al inicio
-        system_msg = {"role": "system", "content": self.system_prompt}
+        # Asegurar que el mensaje de sistema esté al inicio con el scope activo actualizado
+        system_msg = {"role": "system", "content": effective_sys}
         
         # Filtrar mensajes de conversación (omitir sistema previo si estaba duplicado)
         chat_msgs = [m for m in self.messages if m.get("role") != "system"]
