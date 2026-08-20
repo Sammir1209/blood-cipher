@@ -194,31 +194,37 @@ class KaliAgent:
                         # Caso especial Groq: 'Tool choice is none, but model called a tool'
                         # Groq incluye el contenido generado completo en 'failed_generation'
                         if "tool_use_failed" in err_str or "failed_generation" in err_str or "Tool choice is none" in err_str:
-                            import re, json
+                            import re
                             try:
-                                # Buscar failed_generation en la cadena de error
-                                fg_match = re.search(r'"failed_generation":\s*(".*?"|\{.*?\})', err_str)
-                                if fg_match:
-                                    raw_val = fg_match.group(1)
+                                idx = err_str.find('"failed_generation":')
+                                if idx != -1:
+                                    raw = err_str[idx + len('"failed_generation":'):].strip()
+                                    if raw.startswith('"'):
+                                        raw = raw[1:]
+                                    raw = re.sub(r'\"\}\}\s*$', '', raw)
+                                    raw = re.sub(r'\}\}\s*$', '', raw)
+                                    raw = re.sub(r'\"$', '', raw)
                                     try:
-                                        parsed = json.loads(raw_val)
-                                        if isinstance(parsed, dict) and "arguments" in parsed:
-                                            ai_content = str(parsed["arguments"])
-                                        elif isinstance(parsed, str):
-                                            # Tratar como json anidado o texto
-                                            try:
-                                                inner = json.loads(parsed)
-                                                ai_content = inner.get("arguments", parsed)
-                                            except Exception:
-                                                # Regex de fallback para arguments
-                                                arg_m = re.search(r'"arguments":\s*(.*)$', parsed, re.DOTALL)
-                                                ai_content = arg_m.group(1).rstrip('}') if arg_m else parsed
+                                        decoded = raw.encode('utf-8').decode('unicode_escape')
                                     except Exception:
-                                        ai_content = raw_val.strip('"')
-                                    
-                                    if ai_content:
-                                        # Decodificar escapes si existen
-                                        ai_content = ai_content.encode().decode('unicode_escape', errors='ignore')
+                                        decoded = raw.replace('\\u003c', '<').replace('\\u003e', '>').replace('\\n', '\n').replace('\\"', '"')
+
+                                    extracted = None
+                                    if '"arguments":' in decoded:
+                                        arg_idx = decoded.find('"arguments":')
+                                        extracted = decoded[arg_idx + len('"arguments":'):].strip()
+                                    elif 'arguments:' in decoded:
+                                        arg_idx = decoded.find('arguments:')
+                                        extracted = decoded[arg_idx + len('arguments:'):].strip()
+                                    else:
+                                        extracted = decoded.strip()
+
+                                    if extracted:
+                                        if extracted.startswith('"') and extracted.endswith('"'):
+                                            extracted = extracted[1:-1]
+                                        if extracted.endswith('}'):
+                                            extracted = extracted[:-1].strip()
+                                        ai_content = extracted
                                         break
                             except Exception:
                                 pass
