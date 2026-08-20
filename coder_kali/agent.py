@@ -309,6 +309,29 @@ class KaliAgent:
                 console.print("[yellow][*] Secuencia detenida debido a que el operador rechazó una acción.[/yellow]")
                 break
 
+        # Si el modelo terminó devolviendo únicamente un comando o JSON de herramienta sin explicación,
+        # realizar un turno de síntesis final en lenguaje natural para el operador
+        is_raw_cmd = final_response.strip().startswith('{"cmd"') or final_response.strip().startswith('{"command"') or final_response.strip().startswith('<ejecutar_comando>')
+        if (is_raw_cmd or results_feedback) and not should_stop:
+            try:
+                synth_prompt = (
+                    "Presenta ahora tu análisis técnico completo, Ficha 360° y conclusiones en español para el operador "
+                    "basándote en toda la información recopilada del objetivo."
+                )
+                self.messages.append({"role": "user", "content": synth_prompt})
+                import litellm
+                litellm.drop_params = True
+                kwargs = self._prepare_call_kwargs()
+                res = litellm.completion(**kwargs)
+                choice = res.choices[0]
+                synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                if synth_text and not (synth_text.strip().startswith('{"cmd"') or synth_text.strip().startswith('{"command"')):
+                    final_response = synth_text
+                    render_ai_message(synth_text)
+                    self.messages.append({"role": "assistant", "content": synth_text})
+            except Exception:
+                pass
+
         # Guardar historial actualizado en la sesión persistente
         self.current_session.messages = list(self.messages)
         self.session_mgr.save_session(self.current_session)

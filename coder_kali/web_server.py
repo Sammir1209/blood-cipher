@@ -1183,15 +1183,46 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             msgDiv.className = `chat-msg ${role}`;
 
             let formatted = rawContent;
+
+            // 1. Formatear etiquetas XML <ejecutar_comando>
             formatted = formatted.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
                 return `<div class="terminal-box">
                     <div class="terminal-box-header">
-                        <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EN TERMINAL</span>
-                        <span class="badge-run">EJECUTADO</span>
+                        <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EJECUTADO</span>
+                        <span class="badge-run">BASH</span>
                     </div>
                     <div class="terminal-box-code">${escapeHtml(cmd.trim())}</div>
                 </div>`;
             });
+
+            // 2. Formatear llamadas JSON crudas (ej: {"cmd": ["bash", "-lc", "..."]})
+            formatted = formatted.replace(/\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(\[[^\]]*\]|"[^"]*")[^{}]*\}/g, function(match) {
+                try {
+                    let parsed = JSON.parse(match);
+                    let cmdVal = parsed.cmd || parsed.command || parsed.bash || parsed.exec;
+                    let cmdStr = "";
+                    if (Array.isArray(cmdVal)) {
+                        if (cmdVal.length >= 3 && (cmdVal[0].includes('bash') || cmdVal[0].includes('sh')) && (cmdVal[1] === '-c' || cmdVal[1] === '-lc')) {
+                            cmdStr = cmdVal[2];
+                        } else {
+                            cmdStr = cmdVal.join(' ');
+                        }
+                    } else if (typeof cmdVal === 'string') {
+                        cmdStr = cmdVal;
+                    }
+                    if (cmdStr) {
+                        return `<div class="terminal-box">
+                            <div class="terminal-box-header">
+                                <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EJECUTADO</span>
+                                <span class="badge-run">BASH</span>
+                            </div>
+                            <div class="terminal-box-code">${escapeHtml(cmdStr.trim())}</div>
+                        </div>`;
+                    }
+                } catch(e) {}
+                return match;
+            });
+
             formatted = formatted.replace(/\n/g, '<br>');
 
             msgDiv.innerHTML = `
