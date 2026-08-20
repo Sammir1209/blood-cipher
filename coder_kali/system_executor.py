@@ -320,11 +320,14 @@ class SystemExecutor:
     def process_action(self, action: ParsedAction) -> ExecutionResult:
         """Procesa una acción individual (comando o archivo) gestionando la confirmación."""
         if action.action_type == "command":
-            authorized = self.confirm_command(
-                action.content,
-                is_sudo=action.is_sudo,
-                is_dangerous=action.is_dangerous,
-            )
+            if self.auto_approve_safe and not action.is_dangerous:
+                authorized = True
+            else:
+                authorized = self.confirm_command(
+                    action.content,
+                    is_sudo=action.is_sudo,
+                    is_dangerous=action.is_dangerous,
+                )
             if not authorized:
                 return ExecutionResult(
                     success=False,
@@ -343,7 +346,10 @@ class SystemExecutor:
                     returncode=1,
                     is_file_op=True,
                 )
-            authorized = self.confirm_file_write(action.target_path, action.content)
+            if self.auto_approve_safe and not action.is_dangerous:
+                authorized = True
+            else:
+                authorized = self.confirm_file_write(action.target_path, action.content)
             if not authorized:
                 return ExecutionResult(
                     success=False,
