@@ -167,6 +167,8 @@ class KaliAgent:
 
         iterations = 0
         final_response = ""
+        results_feedback: List[str] = []
+        should_stop = False
 
         while iterations < self.max_tool_iterations:
             iterations += 1
