@@ -699,6 +699,80 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Animated Cyberpunk Typing & Thinking Bubble */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 2px;
+        }
+
+        .neural-wave {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .neural-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: neuralBounce 1.3s infinite ease-in-out both;
+        }
+
+        .neural-dot:nth-child(1) {
+            animation-delay: -0.32s;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+        .neural-dot:nth-child(2) {
+            animation-delay: -0.16s;
+            background: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+        .neural-dot:nth-child(3) {
+            animation-delay: 0s;
+            background: var(--accent-purple);
+            box-shadow: 0 0 10px var(--accent-purple);
+        }
+
+        @keyframes neuralBounce {
+            0%, 80%, 100% {
+                transform: scale(0.5) translateY(0);
+                opacity: 0.35;
+            }
+            40% {
+                transform: scale(1.3) translateY(-7px);
+                opacity: 1;
+            }
+        }
+
+        .thinking-status-text {
+            font-family: var(--font-code);
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--accent-green);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background: var(--accent-green);
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -966,6 +1040,54 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 .replace(/'/g, "&#039;");
         }
 
+        function showThinkingBubble() {
+            const stream = document.getElementById('chatStream');
+            removeThinkingBubble();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.id = 'thinkingBubble';
+            msgDiv.className = 'chat-msg assistant';
+
+            msgDiv.innerHTML = `
+                <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // PROCESANDO ORDEN</div>
+                <div class="msg-body" style="background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
+                    <div class="typing-indicator">
+                        <div class="neural-wave">
+                            <div class="neural-dot"></div>
+                            <div class="neural-dot"></div>
+                            <div class="neural-dot"></div>
+                        </div>
+                        <div class="thinking-status-text">
+                            <span id="telemetryStatus">ANALIZANDO VECTOR TÁCTICO...</span>
+                            <span class="blinking-cursor"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            stream.appendChild(msgDiv);
+            stream.scrollTop = stream.scrollHeight;
+
+            const phrases = [
+                "EVALUANDO SUPERFICIE DE ATAQUE...",
+                "ANALIZANDO PROTOCOLOS Y PUERTOS...",
+                "CONSULTANDO MATRIZ DE INTELIGENCIA...",
+                "SINTETIZANDO CADENA DE AUDITORÍA...",
+                "GENERANDO INSTRUCCIONES TÁCTICAS..."
+            ];
+            let pIndex = 0;
+            window._thinkingInterval = setInterval(() => {
+                pIndex = (pIndex + 1) % phrases.length;
+                const el = document.getElementById('telemetryStatus');
+                if (el) el.innerText = phrases[pIndex];
+            }, 1600);
+        }
+
+        function removeThinkingBubble() {
+            if (window._thinkingInterval) clearInterval(window._thinkingInterval);
+            const existing = document.getElementById('thinkingBubble');
+            if (existing) existing.remove();
+        }
+
         async function submitPrompt() {
             const input = document.getElementById('promptInput');
             const text = input.value.trim();
@@ -973,6 +1095,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
             input.value = '';
             renderBubble('user', text);
+            showThinkingBubble();
 
             const btn = document.getElementById('submitBtn');
             btn.innerHTML = '<div class="spinner"></div> <span>PROCESANDO</span>';
@@ -985,10 +1108,12 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     body: JSON.stringify({ prompt: text, session_id: currentSessionId })
                 });
                 const data = await res.json();
+                removeThinkingBubble();
                 if (data.session_id) currentSessionId = data.session_id;
                 renderBubble('assistant', data.response);
                 loadSessions();
             } catch (e) {
+                removeThinkingBubble();
                 renderBubble('assistant', 'Error al procesar con el backend: ' + e);
             } finally {
                 btn.innerHTML = '<span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>';
