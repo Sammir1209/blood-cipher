@@ -178,6 +178,7 @@ class KaliAgent:
                         import litellm
                         import time
                         litellm.suppress_debug_info = True
+                        litellm.drop_params = True
                         kwargs = self._prepare_call_kwargs()
                         response = litellm.completion(**kwargs)
                         choice = response.choices[0]
@@ -189,6 +190,38 @@ class KaliAgent:
                         return f"Error: {err_msg}"
                     except Exception as e:
                         err_str = str(e)
+
+                        # Caso especial Groq: 'Tool choice is none, but model called a tool'
+                        # Groq incluye el contenido generado completo en 'failed_generation'
+                        if "tool_use_failed" in err_str or "failed_generation" in err_str or "Tool choice is none" in err_str:
+                            import re, json
+                            try:
+                                # Buscar failed_generation en la cadena de error
+                                fg_match = re.search(r'"failed_generation":\s*(".*?"|\{.*?\})', err_str)
+                                if fg_match:
+                                    raw_val = fg_match.group(1)
+                                    try:
+                                        parsed = json.loads(raw_val)
+                                        if isinstance(parsed, dict) and "arguments" in parsed:
+                                            ai_content = str(parsed["arguments"])
+                                        elif isinstance(parsed, str):
+                                            # Tratar como json anidado o texto
+                                            try:
+                                                inner = json.loads(parsed)
+                                                ai_content = inner.get("arguments", parsed)
+                                            except Exception:
+                                                # Regex de fallback para arguments
+                                                arg_m = re.search(r'"arguments":\s*(.*)$', parsed, re.DOTALL)
+                                                ai_content = arg_m.group(1).rstrip('}') if arg_m else parsed
+                                    except Exception:
+                                        ai_content = raw_val.strip('"')
+                                    
+                                    if ai_content:
+                                        # Decodificar escapes si existen
+                                        ai_content = ai_content.encode().decode('unicode_escape', errors='ignore')
+                                        break
+                            except Exception:
+                                pass
 
                         # Si el mensaje es muy largo (Request too large), podar agresivamente y reintentar
                         if "request too large" in err_str.lower() or "reduce your message size" in err_str.lower():
@@ -203,7 +236,6 @@ class KaliAgent:
                             retry_count += 1
                             if retry_count < max_retries:
                                 wait_seconds = 15
-                                # Intentar extraer el tiempo exacto si viene en el mensaje de error (ej. retryDelay o try again in X.Xs)
                                 import re
                                 match = re.search(r"(?:retry in|retryDelay[\"':\s]+)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
                                 if match:
