@@ -68,28 +68,42 @@ class KaliAgent:
         self.current_session.messages = list(self.messages)
         self.session_mgr.save_session(self.current_session)
 
-    def _prune_context(self):
-        """Mantiene el contexto compacto para no exceder los límites de tokens por minuto (TPM)."""
-        if len(self.messages) <= 4:
-            return
+    def _get_api_messages(self) -> List[Dict[str, str]]:
+        """
+        Genera una versión optimizada del historial para la API sin destruir
+        la memoria persistente de la sesión del usuario.
+        """
+        if not self.messages:
+            return [{"role": "system", "content": self.system_prompt}]
 
-        # Mantener mensaje de sistema [0]
-        system_msg = self.messages[0]
-        # Recortar salidas de comandos antiguas de mensajes intermedios
-        for i in range(1, len(self.messages) - 2):
-            msg = self.messages[i]
-            content = msg.get("content", "")
-            if len(content) > 500:
-                msg["content"] = content[:300] + "\n... [salida anterior resumida para ahorrar tokens] ..."
+        # Asegurar que el mensaje de sistema esté al inicio
+        system_msg = {"role": "system", "content": self.system_prompt}
+        
+        # Filtrar mensajes de conversación (omitir sistema previo si estaba duplicado)
+        chat_msgs = [m for m in self.messages if m.get("role") != "system"]
 
-        # Si el historial tiene más de 8 mensajes, conservar solo los últimos 4
-        if len(self.messages) > 8:
-            self.messages = [system_msg] + self.messages[-4:]
+        # Conservar hasta los últimos 20 turnos de conversación
+        recent_msgs = chat_msgs[-20:] if len(chat_msgs) > 20 else chat_msgs
+
+        # Crear copia para compactar salidas antiguas sin alterar self.messages
+        api_messages: List[Dict[str, str]] = [system_msg]
+        
+        for i, m in enumerate(recent_msgs):
+            role = m.get("role", "user")
+            content = m.get("content", "")
+
+            # Si es un mensaje antiguo (no los últimos 2) y contiene salida extensa de comando, compactarlo
+            is_recent = i >= (len(recent_msgs) - 2)
+            if not is_recent and "[SALIDA_COMANDO" in content and len(content) > 1000:
+                compacted_content = content[:600] + "\n... [salida de comando previa resumida en contexto] ...\n" + content[-200:]
+                api_messages.append({"role": role, "content": compacted_content})
+            else:
+                api_messages.append({"role": role, "content": content})
+
+        return api_messages
 
     def _prepare_call_kwargs(self) -> Dict[str, Any]:
         """Prepara los argumentos necesarios para la llamada a LiteLLM."""
-        self._prune_context()
-
         provider = self.config_mgr.get_active_provider()
         model = self.config_mgr.get_active_model()
         api_key = self.config_mgr.get_api_key(provider)
@@ -103,7 +117,7 @@ class KaliAgent:
 
         kwargs: Dict[str, Any] = {
             "model": model,
-            "messages": self.messages,
+            "messages": self._get_api_messages(),
             "temperature": self.config_mgr.get("temperature", 0.2),
             "max_tokens": min(self.config_mgr.get("max_tokens", 1500), 2048),
         }
