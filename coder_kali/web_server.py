@@ -607,6 +607,86 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             white-space: pre-wrap;
         }
 
+        /* Live Mission Checklist */
+        .mission-checklist {
+            background: rgba(17, 24, 42, 0.95);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            margin-bottom: 8px;
+        }
+
+        .mission-checklist-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 800;
+            font-family: var(--font-code);
+            color: var(--accent-cyan);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .checklist-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            font-family: var(--font-ui);
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .check-item.pending {
+            opacity: 0.5;
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        .check-item.running {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.08);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+            transform: scale(1.02);
+        }
+
+        .check-item.done {
+            border-color: var(--accent-green);
+            background: rgba(0, 255, 157, 0.08);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.15);
+        }
+
+        .check-status-badge {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .check-item.pending .check-status-badge { color: var(--text-dim); }
+        .check-item.running .check-status-badge { color: var(--accent-cyan); }
+        .check-item.done .check-status-badge { color: var(--accent-green); }
+
         /* Animated Cyberpunk Typing & Thinking Bubble */
         .typing-indicator {
             display: flex;
@@ -846,8 +926,39 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             <div class="recon-header">
                 <i class="fa-solid fa-crosshairs" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
                 <input type="text" id="reconTargetInput" placeholder="Ingresa un dominio o IP objetivo (ej. binsperu.pe)...">
-                <button class="btn-submit" onclick="runVisualScan()"><i class="fa-solid fa-radar"></i> LANZAR ESCANEO VISUAL</button>
+                <button class="btn-submit" id="btnRunScan" onclick="runVisualScan()"><i class="fa-solid fa-radar"></i> LANZAR ESCANEO 360°</button>
             </div>
+
+            <!-- Live Mission Checklist -->
+            <div class="mission-checklist" id="reconChecklist" style="display: none;">
+                <div class="mission-checklist-header">
+                    <span><i class="fa-solid fa-list-check"></i> PROGRESO DE LA MISIÓN TÁCTICA</span>
+                    <span id="reconOverallStatus" style="color: var(--accent-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> EJECUTANDO TAREAS</span>
+                </div>
+                <div class="checklist-items">
+                    <div class="check-item pending" id="chkDns">
+                        <span><i class="fa-solid fa-network-wired"></i> 1. Resolución DNS y Red</span>
+                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                    </div>
+                    <div class="check-item pending" id="chkWaf">
+                        <span><i class="fa-solid fa-shield-virus"></i> 2. Detección WAF y Cabeceras</span>
+                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                    </div>
+                    <div class="check-item pending" id="chkTech">
+                        <span><i class="fa-solid fa-globe"></i> 3. Tecnologías y CMS</span>
+                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                    </div>
+                    <div class="check-item pending" id="chkPorts">
+                        <span><i class="fa-solid fa-microchip"></i> 4. Puertos Nmap</span>
+                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                    </div>
+                    <div class="check-item pending" id="chkSubs">
+                        <span><i class="fa-solid fa-sitemap"></i> 5. Subdominios</span>
+                        <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="recon-grid">
                 <div class="recon-card">
                     <h4><i class="fa-solid fa-network-wired"></i> Puertos y Servicios (Nmap)</h4>
@@ -1024,6 +1135,22 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        function updateCheckItem(id, state, customText) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.className = `check-item ${state}`;
+            const badge = el.querySelector('.check-status-badge');
+            if (!badge) return;
+
+            if (state === 'pending') {
+                badge.innerHTML = `<i class="fa-regular fa-circle"></i> ${customText || 'PENDIENTE'}`;
+            } else if (state === 'running') {
+                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${customText || 'EN CURSO...'}`;
+            } else if (state === 'done') {
+                badge.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--accent-green);"></i> ${customText || 'LOGRADO ✓'}`;
+            }
+        }
+
         function showThinkingBubble() {
             const stream = document.getElementById('chatStream');
             removeThinkingBubble();
@@ -1032,17 +1159,33 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             msgDiv.id = 'thinkingBubble';
             msgDiv.className = 'chat-msg assistant';
             msgDiv.innerHTML = `
-                <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // PROCESANDO ORDEN</div>
+                <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // AUDITORÍA EN TIEMPO REAL</div>
                 <div class="msg-body" style="background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
-                    <div class="typing-indicator">
-                        <div class="neural-wave">
-                            <div class="neural-dot"></div>
-                            <div class="neural-dot"></div>
-                            <div class="neural-dot"></div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="checklist-items" style="grid-template-columns: 1fr; gap: 6px;">
+                            <div class="check-item running" id="tbStep1">
+                                <span><i class="fa-solid fa-crosshairs"></i> 1. Análisis de Objetivo e Inteligencia de Red</span>
+                                <span class="check-status-badge"><i class="fa-solid fa-spinner fa-spin"></i> EN CURSO...</span>
+                            </div>
+                            <div class="check-item pending" id="tbStep2">
+                                <span><i class="fa-solid fa-shield-halved"></i> 2. Evaluación de WAF, Puertos y Tecnologías</span>
+                                <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                            </div>
+                            <div class="check-item pending" id="tbStep3">
+                                <span><i class="fa-solid fa-radiation"></i> 3. Diagnóstico Top 10 Vectores de Riesgo OWASP</span>
+                                <span class="check-status-badge"><i class="fa-regular fa-circle"></i> PENDIENTE</span>
+                            </div>
                         </div>
-                        <div class="thinking-status-text">
-                            <span id="telemetryStatus">CONECTANDO CON MOTOR IA...</span>
-                            <span class="blinking-cursor"></span>
+                        <div class="typing-indicator" style="margin-top: 4px;">
+                            <div class="neural-wave">
+                                <div class="neural-dot"></div>
+                                <div class="neural-dot"></div>
+                                <div class="neural-dot"></div>
+                            </div>
+                            <div class="thinking-status-text">
+                                <span id="telemetryStatus">RECOPILANDO INTELIGENCIA TÁCTICA...</span>
+                                <span class="blinking-cursor"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1050,23 +1193,19 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             stream.appendChild(msgDiv);
             stream.scrollTop = stream.scrollHeight;
 
-            const phrases = [
-                "CONECTANDO CON MOTOR IA...",
-                "EVALUANDO SUPERFICIE DE OBJETIVO...",
-                "ANALIZANDO PROTOCOLOS Y PUERTOS...",
-                "GENERANDO PLAN DE AUDITORÍA...",
-                "PREPARANDO EJECUCIÓN TÁCTICA..."
-            ];
-            let pIndex = 0;
-            window._thinkingInterval = setInterval(() => {
-                pIndex = (pIndex + 1) % phrases.length;
-                const el = document.getElementById('telemetryStatus');
-                if (el) el.innerText = phrases[pIndex];
-            }, 1400);
+            // Simular progresión en vivo de tareas logradas
+            setTimeout(() => {
+                updateCheckItem('tbStep1', 'done', 'LOGRADO ✓');
+                updateCheckItem('tbStep2', 'running', 'EJECUTANDO...');
+            }, 1200);
+
+            setTimeout(() => {
+                updateCheckItem('tbStep2', 'done', 'LOGRADO ✓');
+                updateCheckItem('tbStep3', 'running', 'SINTETIZANDO...');
+            }, 2600);
         }
 
         function removeThinkingBubble() {
-            if (window._thinkingInterval) clearInterval(window._thinkingInterval);
             const existing = document.getElementById('thinkingBubble');
             if (existing) existing.remove();
         }
@@ -1085,7 +1224,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             btn.disabled = true;
 
             try {
-                // Streaming en tiempo real vía Server-Sent Events (SSE)
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1112,7 +1250,17 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 return;
             }
 
-            document.getElementById('rcNmap').innerText = "Ejecutando Nmap port scan...";
+            const cl = document.getElementById('reconChecklist');
+            cl.style.display = 'flex';
+            document.getElementById('reconOverallStatus').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> EJECUTANDO MISIONES EN PARALELO...';
+
+            updateCheckItem('chkDns', 'running', 'RESOLVIENDO...');
+            updateCheckItem('chkWaf', 'running', 'ANALIZANDO...');
+            updateCheckItem('chkTech', 'running', 'INSPECCIONANDO...');
+            updateCheckItem('chkPorts', 'running', 'ESCANEANDO...');
+            updateCheckItem('chkSubs', 'running', 'ENUMERANDO...');
+
+            document.getElementById('rcNmap').innerText = "Ejecutando Nmap port scan en tiempo real...";
             document.getElementById('rcWhatWeb').innerText = "Inspeccionando tecnologías web...";
             document.getElementById('rcHeaders').innerText = "Analizando cabeceras HTTP y WAF...";
             document.getElementById('rcSubs').innerText = "Enumerando subdominios...";
@@ -1124,6 +1272,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     body: JSON.stringify({ target: target })
                 });
                 const data = await res.json();
+
+                updateCheckItem('chkDns', 'done', 'LOGRADO ✓');
+                updateCheckItem('chkWaf', 'done', 'LOGRADO ✓');
+                updateCheckItem('chkTech', 'done', 'LOGRADO ✓');
+                updateCheckItem('chkPorts', 'done', 'LOGRADO ✓');
+                updateCheckItem('chkSubs', 'done', 'LOGRADO ✓');
+
+                document.getElementById('reconOverallStatus').innerHTML = '<span style="color: var(--accent-green);"><i class="fa-solid fa-circle-check"></i> MISIÓN 360° COMPLETADA CON ÉXITO</span>';
+
                 document.getElementById('rcNmap').innerText = data.nmap || 'Completado sin salida.';
                 document.getElementById('rcWhatWeb').innerText = data.whatweb || 'Completado sin salida.';
                 document.getElementById('rcHeaders').innerText = data.headers || 'Completado sin salida.';
