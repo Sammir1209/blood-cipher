@@ -389,6 +389,29 @@ def scope_command(
     interactive_scope_menu(scope_mgr)
 
 
+@app.command(name="web", help="🌐 Inicia el Centro de Operaciones Visual / Dashboard Web en el navegador.")
+def web_dashboard(
+    port: int = typer.Option(7777, "--port", "-p", help="Puerto HTTP para el servidor web local."),
+    no_open: bool = typer.Option(False, "--no-open", help="No abrir automáticamente el navegador."),
+):
+    """Lanza la interfaz web táctica de Coder-Kali en el navegador."""
+    from coder_kali.web_server import start_web_server
+    config_mgr = ConfigManager()
+    if not config_mgr.is_configured():
+        console.print("[yellow][!] Se recomienda configurar una API Key primero con 'coder-kali config'.[/yellow]")
+
+    start_web_server(port=port, open_browser=not no_open)
+
+
+@app.command(name="ui", help="🌐 Alias para 'coder-kali web' (Panel Gráfico Web).")
+def ui_dashboard(
+    port: int = typer.Option(7777, "--port", "-p", help="Puerto HTTP para el servidor web local."),
+    no_open: bool = typer.Option(False, "--no-open", help="No abrir automáticamente el navegador."),
+):
+    """Alias de coder-kali web."""
+    web_dashboard(port=port, no_open=no_open)
+
+
 @app.command(name="run", help="Ejecuta una instrucción directa en una sola línea sin entrar al chat.")
 def run_command_line(
     prompt: str = typer.Argument(..., help="Instrucción o tarea a ejecutar (ej. 'audita puertos locales')")
