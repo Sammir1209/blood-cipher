@@ -1578,6 +1578,12 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
+        try:
+            self._handle_get()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _handle_get(self):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
@@ -1654,6 +1660,12 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
         self.send_error(404, "Ruta no encontrada")
 
     def do_POST(self):
+        try:
+            self._handle_post()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _handle_post(self):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
