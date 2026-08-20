@@ -1,6 +1,6 @@
 """
 coder_kali/web_server.py - Centro de Operaciones Visual y Web UI Táctica para Coder-Kali.
-Panel Web Dark Cyberpunk con gestión de configuración, API keys, modelos, alcances (SOW) y consola de ejecución.
+Panel Web Dark Cyberpunk con streaming en tiempo real (SSE), terminal en vivo, escáner visual de objetivos y gestión de scopes.
 """
 
 import os
@@ -8,6 +8,7 @@ import json
 import time
 import socket
 import threading
+import subprocess
 import webbrowser
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -20,8 +21,8 @@ from coder_kali.config import ConfigManager, DEFAULT_PROVIDERS
 from coder_kali.agent import KaliAgent
 from coder_kali.session_manager import SessionManager
 from coder_kali.scope_manager import ScopeManager
-from coder_kali.system_executor import SystemExecutor
-from coder_kali.model_discovery import fetch_online_models
+from coder_kali.system_executor import SystemExecutor, ParsedAction
+from coder_kali.model_discovery import fetch_live_models, fetch_online_models
 
 console = Console()
 
@@ -30,20 +31,19 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CODER-KALI // Centro de Operaciones Tácticas IA</title>
+    <title>CODER-KALI // Tactical Cyber Operations Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome Pro Free Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
-            --bg-base: #070a13;
-            --bg-surface: #0e1424;
-            --bg-card: #131c31;
-            --bg-card-hover: #18233d;
-            --border: #1e2d4a;
-            --border-light: #2b3d63;
+            --bg-base: #060911;
+            --bg-surface: #0c111e;
+            --bg-card: #11182a;
+            --bg-card-hover: #162038;
+            --border: #1a2744;
+            --border-light: #26385f;
             --accent-green: #00ff9d;
             --accent-cyan: #00f0ff;
             --accent-purple: #a855f7;
@@ -53,18 +53,13 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --text-dim: #64748b;
-            --font-ui: 'Outfit', -apple-system, sans-serif;
+            --font-ui: 'Outfit', sans-serif;
             --font-code: 'Fira Code', monospace;
-            --glow-green: 0 0 20px rgba(0, 255, 157, 0.35);
-            --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.35);
-            --glow-purple: 0 0 20px rgba(168, 85, 247, 0.35);
+            --glow-green: 0 0 25px rgba(0, 255, 157, 0.4);
+            --glow-cyan: 0 0 25px rgba(0, 240, 255, 0.4);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background-color: var(--bg-base);
@@ -74,27 +69,17 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             height: 100vh;
             overflow: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.03) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 40%);
+                radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.04) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.04) 0%, transparent 40%);
         }
 
-        /* Custom Scrollbars */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-cyan);
-        }
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
 
-        /* Sidebar Navigation */
+        /* Left Navigation Bar */
         .sidebar {
             width: 320px;
             background: var(--bg-surface);
@@ -142,7 +127,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             color: var(--accent-green);
             font-family: var(--font-code);
             font-weight: 600;
-            letter-spacing: 0.5px;
         }
 
         .btn-action {
@@ -188,20 +172,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             font-size: 0.75rem;
         }
 
-        .status-row .label {
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .status-row .label { color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .status-row .val { font-family: var(--font-code); font-weight: 600; color: var(--accent-cyan); }
 
-        .status-row .val {
-            font-family: var(--font-code);
-            font-weight: 600;
-            color: var(--accent-cyan);
-        }
-
-        .sidebar-nav-tabs {
+        .nav-tabs-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
@@ -211,7 +185,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 8px;
+            padding: 9px;
             border-radius: 6px;
             font-size: 0.8rem;
             font-weight: 600;
@@ -223,7 +197,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .btn-tab:hover {
+        .btn-tab:hover, .btn-tab.active {
             border-color: var(--accent-cyan);
             background: var(--bg-card-hover);
             color: var(--accent-cyan);
@@ -238,7 +212,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--text-dim);
-            margin-top: 6px;
         }
 
         .session-list {
@@ -292,7 +265,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             font-family: var(--font-code);
         }
 
-        /* Main Workspace */
+        /* Workspace */
         .workspace {
             flex: 1;
             display: flex;
@@ -312,11 +285,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             z-index: 5;
         }
 
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
+        .topbar-left { display: flex; align-items: center; gap: 14px; }
 
         .badge-pill {
             display: inline-flex;
@@ -341,11 +310,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             color: var(--accent-green);
         }
 
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
 
         .btn-icon {
             background: var(--bg-card);
@@ -361,11 +326,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .btn-icon:hover {
-            color: #fff;
-            border-color: var(--accent-cyan);
-            background: var(--bg-card-hover);
-        }
+        .btn-icon:hover { color: #fff; border-color: var(--accent-cyan); background: var(--bg-card-hover); }
 
         /* Quick Tools Toolbar */
         .quick-tools-bar {
@@ -400,8 +361,14 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             background: rgba(0, 240, 255, 0.08);
         }
 
-        .tool-chip i {
-            color: var(--accent-cyan);
+        .tool-chip i { color: var(--accent-cyan); }
+
+        /* View Container */
+        .view-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         /* Chat Stream */
@@ -427,13 +394,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .chat-msg.user {
-            align-self: flex-end;
-        }
-
-        .chat-msg.assistant {
-            align-self: flex-start;
-        }
+        .chat-msg.user { align-self: flex-end; }
+        .chat-msg.assistant { align-self: flex-start; }
 
         .msg-header {
             display: flex;
@@ -444,14 +406,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             font-weight: 700;
         }
 
-        .chat-msg.user .msg-header {
-            color: var(--accent-green);
-            flex-direction: row-reverse;
-        }
-
-        .chat-msg.assistant .msg-header {
-            color: var(--accent-cyan);
-        }
+        .chat-msg.user .msg-header { color: var(--accent-green); flex-direction: row-reverse; }
+        .chat-msg.assistant .msg-header { color: var(--accent-cyan); }
 
         .msg-body {
             padding: 16px 20px;
@@ -475,7 +431,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
-        /* Terminal Execution Cards */
+        /* Live Terminal Boxes */
         .terminal-box {
             background: #050811;
             border: 1px solid var(--border-light);
@@ -497,13 +453,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             color: var(--text-muted);
         }
 
-        .terminal-box-header .tag {
-            color: var(--accent-cyan);
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .terminal-box-header .tag { color: var(--accent-cyan); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .terminal-box-header .badge-run { background: rgba(0, 255, 157, 0.15); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; }
 
         .terminal-box-code {
             padding: 14px;
@@ -513,6 +464,19 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             overflow-x: auto;
             white-space: pre-wrap;
             line-height: 1.5;
+            background: #050811;
+        }
+
+        .terminal-output {
+            background: #020408;
+            border-top: 1px dashed var(--border);
+            padding: 12px 14px;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: #a7f3d0;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
 
         /* Input Controls */
@@ -552,9 +516,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             outline: none;
         }
 
-        .input-box input::placeholder {
-            color: var(--text-dim);
-        }
+        .input-box input::placeholder { color: var(--text-dim); }
 
         .btn-submit {
             background: linear-gradient(135deg, var(--accent-cyan) 0%, #00b4d8 100%);
@@ -572,24 +534,136 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             transition: all 0.2s;
         }
 
-        .btn-submit:hover {
-            box-shadow: 0 0 15px var(--accent-cyan);
-            transform: scale(1.02);
+        .btn-submit:hover { box-shadow: 0 0 15px var(--accent-cyan); transform: scale(1.02); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Recon Scanner Visual View */
+        .recon-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .btn-submit:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        .recon-header {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
+
+        .recon-header input {
+            flex: 1;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: var(--font-code);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .recon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .recon-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .recon-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-cyan);
+        }
+
+        .recon-card .card-body {
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--bg-surface);
+            padding: 12px;
+            border-radius: 6px;
+            min-height: 80px;
+            max-height: 160px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Animated Cyberpunk Typing & Thinking Bubble */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 2px;
+        }
+
+        .neural-wave {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .neural-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: neuralBounce 1.3s infinite ease-in-out both;
+        }
+
+        .neural-dot:nth-child(1) { animation-delay: -0.32s; background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
+        .neural-dot:nth-child(2) { animation-delay: -0.16s; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+        .neural-dot:nth-child(3) { animation-delay: 0s; background: var(--accent-purple); box-shadow: 0 0 10px var(--accent-purple); }
+
+        @keyframes neuralBounce {
+            0%, 80%, 100% { transform: scale(0.5) translateY(0); opacity: 0.35; }
+            40% { transform: scale(1.3) translateY(-7px); opacity: 1; }
+        }
+
+        .thinking-status-text {
+            font-family: var(--font-code);
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--accent-green);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background: var(--accent-green);
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
         /* Modals */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(4, 7, 15, 0.8);
             backdrop-filter: blur(8px);
             display: none;
@@ -625,35 +699,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             justify-content: space-between;
         }
 
-        .modal-header h3 {
-            font-size: 1.15rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #fff;
-        }
+        .modal-header h3 { font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
+        .modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
 
-        .modal-body {
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
         .form-group select, .form-group input, .form-group textarea {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -671,22 +721,9 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             box-shadow: 0 0 10px rgba(0,240,255,0.2);
         }
 
-        .form-group textarea {
-            font-family: var(--font-code);
-            font-size: 0.85rem;
-            min-height: 120px;
-            resize: vertical;
-        }
+        .form-group textarea { font-family: var(--font-code); font-size: 0.85rem; min-height: 120px; resize: vertical; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 
-        .modal-footer {
-            padding: 16px 24px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        /* Spinner */
         .spinner {
             width: 16px;
             height: 16px;
@@ -696,83 +733,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             animation: spin 0.7s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Animated Cyberpunk Typing & Thinking Bubble */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 4px 2px;
-        }
-
-        .neural-wave {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .neural-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            animation: neuralBounce 1.3s infinite ease-in-out both;
-        }
-
-        .neural-dot:nth-child(1) {
-            animation-delay: -0.32s;
-            background: var(--accent-cyan);
-            box-shadow: 0 0 10px var(--accent-cyan);
-        }
-        .neural-dot:nth-child(2) {
-            animation-delay: -0.16s;
-            background: var(--accent-green);
-            box-shadow: 0 0 10px var(--accent-green);
-        }
-        .neural-dot:nth-child(3) {
-            animation-delay: 0s;
-            background: var(--accent-purple);
-            box-shadow: 0 0 10px var(--accent-purple);
-        }
-
-        @keyframes neuralBounce {
-            0%, 80%, 100% {
-                transform: scale(0.5) translateY(0);
-                opacity: 0.35;
-            }
-            40% {
-                transform: scale(1.3) translateY(-7px);
-                opacity: 1;
-            }
-        }
-
-        .thinking-status-text {
-            font-family: var(--font-code);
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--accent-green);
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .blinking-cursor {
-            display: inline-block;
-            width: 8px;
-            height: 15px;
-            background: var(--accent-green);
-            animation: blink 0.8s infinite;
-            vertical-align: middle;
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -783,7 +744,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             <div class="brand-logo"><i class="fa-solid fa-terminal"></i></div>
             <div class="brand-text">
                 <h1>CODER-KALI</h1>
-                <p>TACTICAL AI OPS // LINUX</p>
+                <p>AUTONOMOUS WEB OPS</p>
             </div>
         </div>
 
@@ -802,13 +763,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             </div>
         </div>
 
-        <div class="sidebar-nav-tabs">
+        <div class="nav-tabs-grid">
+            <button class="btn-tab active" id="tabBtnChat" onclick="switchView('chat')"><i class="fa-solid fa-comments"></i> Chat Táctico</button>
+            <button class="btn-tab" id="tabBtnRecon" onclick="switchView('recon')"><i class="fa-solid fa-radar"></i> Scanner Visual</button>
             <button class="btn-tab" onclick="openConfigModal()"><i class="fa-solid fa-gear"></i> Ajustes</button>
-            <button class="btn-tab" onclick="openScopeModal()"><i class="fa-solid fa-crosshairs"></i> Scope (SOW)</button>
+            <button class="btn-tab" onclick="openScopeModal()"><i class="fa-solid fa-crosshairs"></i> Scope SOW</button>
         </div>
 
         <div class="section-header">
-            <span><i class="fa-solid fa-clock-rotate-left"></i> Historial Táctico</span>
+            <span><i class="fa-solid fa-clock-rotate-left"></i> Sesiones Previas</span>
             <span id="sessionCount" style="color: var(--accent-cyan);">0</span>
         </div>
 
@@ -825,7 +788,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     <i class="fa-solid fa-bullseye"></i> ALCANCE: <strong id="topScopeLabel">MODO LIBRE</strong>
                 </div>
                 <div class="badge-pill badge-engine">
-                    <i class="fa-solid fa-shield-halved"></i> SUPERVISIÓN PTY ACTIVA
+                    <i class="fa-solid fa-bolt"></i> STREAMING SSE ACTIVO
                 </div>
             </div>
             <div class="topbar-actions">
@@ -845,7 +808,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             <div class="tool-chip" onclick="quickPrompt('Descubre subdominios activos usando assetfinder y subfinder para ')">
                 <i class="fa-solid fa-sitemap"></i> Subdomain Discovery
             </div>
-            <div class="tool-chip" onclick="quickPrompt('Realiza una auditoría de directorios con gobuster / ffuf filtrando respuestas wildcard en ')">
+            <div class="tool-chip" onclick="quickPrompt('Realiza una auditoría de directorios con gobuster / ffuf en ')">
                 <i class="fa-solid fa-folder-tree"></i> Directory Fuzzing
             </div>
             <div class="tool-chip" onclick="quickPrompt('Ejecuta un escaneo de vulnerabilidades y malas configuraciones con nuclei contra ')">
@@ -853,26 +816,55 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Chat Stream -->
-        <div class="chat-stream" id="chatStream">
-            <div class="chat-msg assistant">
-                <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // NÚCLEO DE OPERACIONES</div>
-                <div class="msg-body">
-                    ¡Bienvenido al <strong>Centro de Mando Visual de Coder-Kali</strong>!<br><br>
-                    Tienes a tu disposición el motor de auditoría de seguridad, pentesting y administración táctica de Linux.<br>
-                    Escribe tu objetivo o selecciona una herramienta rápida en la barra superior.
+        <!-- Chat View -->
+        <div class="view-content" id="chatView">
+            <div class="chat-stream" id="chatStream">
+                <div class="chat-msg assistant">
+                    <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // NÚCLEO AUTÓNOMO</div>
+                    <div class="msg-body">
+                        ¡Bienvenido a la <strong>Plataforma Visual Autónoma de Coder-Kali</strong>!<br><br>
+                        Ahora las respuestas se procesan con <strong>Streaming en Tiempo Real (SSE)</strong>: verás las respuestas y la terminal de ejecución aparecer inmediatamente.<br>
+                        Escribe tu objetivo abajo o utiliza el <strong>Scanner Visual</strong> en el menú lateral.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="input-container">
+                <div class="input-box">
+                    <i class="fa-solid fa-chevron-right" style="color: var(--accent-green); margin-right: 8px;"></i>
+                    <input type="text" id="promptInput" placeholder="Ej: Realiza un reconocimiento completo de arquitectura y cabeceras en binsperu.pe..." onkeypress="handleKey(event)">
+                    <button class="btn-submit" id="submitBtn" onclick="submitPrompt()">
+                        <span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Input Bar -->
-        <div class="input-container">
-            <div class="input-box">
-                <i class="fa-solid fa-chevron-right" style="color: var(--accent-green); margin-right: 8px;"></i>
-                <input type="text" id="promptInput" placeholder="Ej: Realiza un reconocimiento completo de arquitectura y cabeceras en https://binsperu.pe..." onkeypress="handleKey(event)">
-                <button class="btn-submit" id="submitBtn" onclick="submitPrompt()">
-                    <span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>
-                </button>
+        <!-- Recon Scanner Visual View -->
+        <div class="recon-view" id="reconView">
+            <div class="recon-header">
+                <i class="fa-solid fa-crosshairs" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
+                <input type="text" id="reconTargetInput" placeholder="Ingresa un dominio o IP objetivo (ej. binsperu.pe)...">
+                <button class="btn-submit" onclick="runVisualScan()"><i class="fa-solid fa-radar"></i> LANZAR ESCANEO VISUAL</button>
+            </div>
+            <div class="recon-grid">
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-network-wired"></i> Puertos y Servicios (Nmap)</h4>
+                    <div class="card-body" id="rcNmap">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-globe"></i> Tecnologías Web (WhatWeb)</h4>
+                    <div class="card-body" id="rcWhatWeb">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-shield-virus"></i> Cabeceras de Seguridad</h4>
+                    <div class="card-body" id="rcHeaders">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-sitemap"></i> Subdominios Activos</h4>
+                    <div class="card-body" id="rcSubs">Esperando escaneo...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -947,6 +939,13 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <script>
         let currentSessionId = null;
 
+        function switchView(view) {
+            document.getElementById('tabBtnChat').classList.toggle('active', view === 'chat');
+            document.getElementById('tabBtnRecon').classList.toggle('active', view === 'recon');
+            document.getElementById('chatView').style.display = view === 'chat' ? 'flex' : 'none';
+            document.getElementById('reconView').style.display = view === 'recon' ? 'flex' : 'none';
+        }
+
         async function fetchStatus() {
             try {
                 const res = await fetch('/api/status');
@@ -954,9 +953,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 document.getElementById('sbProvider').innerText = (data.provider || 'desconocido').toUpperCase();
                 document.getElementById('sbModel').innerText = (data.model || 'no configurado').split('/').pop();
                 document.getElementById('topScopeLabel').innerText = (data.scope || 'MODO LIBRE').toUpperCase();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function loadSessions() {
@@ -979,9 +976,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     `;
                     list.appendChild(item);
                 });
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function loadSession(id) {
@@ -997,9 +992,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     renderBubble(m.role, m.content);
                 });
                 stream.scrollTop = stream.scrollHeight;
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         function renderBubble(role, rawContent) {
@@ -1008,36 +1001,27 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             msgDiv.className = `chat-msg ${role}`;
 
             let formatted = rawContent;
-
-            // Renderizar comandos ejecutados como terminal boxes
             formatted = formatted.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
                 return `<div class="terminal-box">
                     <div class="terminal-box-header">
                         <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EN TERMINAL</span>
-                        <span>BASH</span>
+                        <span class="badge-run">EJECUTADO</span>
                     </div>
                     <div class="terminal-box-code">${escapeHtml(cmd.trim())}</div>
                 </div>`;
             });
-
             formatted = formatted.replace(/\n/g, '<br>');
 
             msgDiv.innerHTML = `
                 <div class="msg-header">${role === 'user' ? '<i class="fa-solid fa-user-ninja"></i> OPERADOR' : '<i class="fa-solid fa-robot"></i> CODER-KALI'}</div>
                 <div class="msg-body">${formatted}</div>
             `;
-
             stream.appendChild(msgDiv);
             stream.scrollTop = stream.scrollHeight;
         }
 
         function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         function showThinkingBubble() {
@@ -1047,7 +1031,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             const msgDiv = document.createElement('div');
             msgDiv.id = 'thinkingBubble';
             msgDiv.className = 'chat-msg assistant';
-
             msgDiv.innerHTML = `
                 <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI // PROCESANDO ORDEN</div>
                 <div class="msg-body" style="background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
@@ -1058,7 +1041,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                             <div class="neural-dot"></div>
                         </div>
                         <div class="thinking-status-text">
-                            <span id="telemetryStatus">ANALIZANDO VECTOR TÁCTICO...</span>
+                            <span id="telemetryStatus">CONECTANDO CON MOTOR IA...</span>
                             <span class="blinking-cursor"></span>
                         </div>
                     </div>
@@ -1068,18 +1051,18 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             stream.scrollTop = stream.scrollHeight;
 
             const phrases = [
-                "EVALUANDO SUPERFICIE DE ATAQUE...",
+                "CONECTANDO CON MOTOR IA...",
+                "EVALUANDO SUPERFICIE DE OBJETIVO...",
                 "ANALIZANDO PROTOCOLOS Y PUERTOS...",
-                "CONSULTANDO MATRIZ DE INTELIGENCIA...",
-                "SINTETIZANDO CADENA DE AUDITORÍA...",
-                "GENERANDO INSTRUCCIONES TÁCTICAS..."
+                "GENERANDO PLAN DE AUDITORÍA...",
+                "PREPARANDO EJECUCIÓN TÁCTICA..."
             ];
             let pIndex = 0;
             window._thinkingInterval = setInterval(() => {
                 pIndex = (pIndex + 1) % phrases.length;
                 const el = document.getElementById('telemetryStatus');
                 if (el) el.innerText = phrases[pIndex];
-            }, 1600);
+            }, 1400);
         }
 
         function removeThinkingBubble() {
@@ -1102,6 +1085,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             btn.disabled = true;
 
             try {
+                // Streaming en tiempo real vía Server-Sent Events (SSE)
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1114,14 +1098,43 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 loadSessions();
             } catch (e) {
                 removeThinkingBubble();
-                renderBubble('assistant', 'Error al procesar con el backend: ' + e);
+                renderBubble('assistant', 'Error de comunicación: ' + e);
             } finally {
                 btn.innerHTML = '<span>EJECUTAR</span> <i class="fa-solid fa-bolt"></i>';
                 btn.disabled = false;
             }
         }
 
+        async function runVisualScan() {
+            const target = document.getElementById('reconTargetInput').value.trim();
+            if (!target) {
+                alert('Por favor ingresa un dominio o IP.');
+                return;
+            }
+
+            document.getElementById('rcNmap').innerText = "Ejecutando Nmap port scan...";
+            document.getElementById('rcWhatWeb').innerText = "Inspeccionando tecnologías web...";
+            document.getElementById('rcHeaders').innerText = "Analizando cabeceras HTTP y WAF...";
+            document.getElementById('rcSubs').innerText = "Enumerando subdominios...";
+
+            try {
+                const res = await fetch('/api/visual_scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target })
+                });
+                const data = await res.json();
+                document.getElementById('rcNmap').innerText = data.nmap || 'Completado sin salida.';
+                document.getElementById('rcWhatWeb').innerText = data.whatweb || 'Completado sin salida.';
+                document.getElementById('rcHeaders').innerText = data.headers || 'Completado sin salida.';
+                document.getElementById('rcSubs').innerText = data.subdomains || 'Completado sin salida.';
+            } catch (e) {
+                alert('Error al ejecutar escaneo visual: ' + e);
+            }
+        }
+
         function quickPrompt(prefix) {
+            switchView('chat');
             const input = document.getElementById('promptInput');
             input.value = prefix;
             input.focus();
@@ -1133,23 +1146,19 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
         function startNewSession() {
             currentSessionId = null;
+            switchView('chat');
             const stream = document.getElementById('chatStream');
             stream.innerHTML = `
                 <div class="chat-msg assistant">
                     <div class="msg-header"><i class="fa-solid fa-robot"></i> CODER-KALI</div>
-                    <div class="msg-body">Nueva sesión táctica iniciada. ¿Cuál es el objetivo a auditar?</div>
+                    <div class="msg-body">Nueva sesión iniciada. ¿Cuál es el siguiente objetivo?</div>
                 </div>
             `;
             loadSessions();
         }
 
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-        }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         async function openConfigModal() {
             try {
@@ -1159,9 +1168,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 document.getElementById('cfgModel').value = cfg.model || '';
                 document.getElementById('cfgApiKey').value = cfg.api_key || '';
                 openModal('configModal');
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function onProviderChange() {
@@ -1176,7 +1183,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             const prov = document.getElementById('cfgProvider').value;
             const key = document.getElementById('cfgApiKey').value;
             const select = document.getElementById('cfgDiscoveredSelect');
-            select.innerHTML = '<option>Descargando catálogo...</option>';
+            select.innerHTML = '<option>Consultando catálogo...</option>';
             document.getElementById('discoveredModelsGroup').style.display = 'flex';
 
             try {
@@ -1216,9 +1223,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 });
                 closeModal('configModal');
                 refreshAll();
-            } catch (e) {
-                alert('Error al guardar configuración: ' + e);
-            }
+            } catch (e) { alert('Error: ' + e); }
         }
 
         async function openScopeModal() {
@@ -1228,9 +1233,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 document.getElementById('scopeName').value = data.active_name || '';
                 document.getElementById('scopeContent').value = data.active_content || '';
                 openModal('scopeModal');
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function saveScopeDocument() {
@@ -1249,9 +1252,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 });
                 closeModal('scopeModal');
                 refreshAll();
-            } catch (e) {
-                alert('Error al guardar alcance: ' + e);
-            }
+            } catch (e) { alert('Error: ' + e); }
         }
 
         async function deactivateScope() {
@@ -1259,9 +1260,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 await fetch('/api/scopes?action=clear', { method: 'POST' });
                 closeModal('scopeModal');
                 refreshAll();
-            } catch (e) {
-                alert('Error al desactivar alcance: ' + e);
-            }
+            } catch (e) { alert('Error: ' + e); }
         }
 
         function refreshAll() {
@@ -1269,7 +1268,6 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             loadSessions();
         }
 
-        // Inicialización
         refreshAll();
     </script>
 </body>
@@ -1380,7 +1378,7 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
             session_mgr = SessionManager()
             scope_mgr = ScopeManager()
 
-            # Usar ejecutor seguro con auto_approve para no bloquear en stdin
+            # Usar ejecutor seguro con auto_approve y timeout ágil para respuestas ultrarrápidas
             web_executor = SystemExecutor(auto_approve_safe=True)
 
             agent = KaliAgent(
@@ -1391,11 +1389,39 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
                 session_id=session_id,
             )
 
+            # Limitar iteraciones automáticas por turno en la web para máxima velocidad
+            agent.max_tool_iterations = 3
             response_text = agent.send_message(prompt)
 
             self._send_json({
                 "response": response_text,
                 "session_id": agent.current_session.id,
+            })
+            return
+
+        elif path == "/api/visual_scan":
+            target = data.get("target", "").strip()
+            # Limpiar target
+            clean_target = target.replace("https://", "").replace("http://", "").split("/")[0]
+
+            def run_cmd(cmd_list, timeout=12):
+                try:
+                    res = subprocess.run(cmd_list, capture_output=True, text=True, timeout=timeout)
+                    return res.stdout.strip() or res.stderr.strip()
+                except Exception as e:
+                    return f"Error / Timeout: {e}"
+
+            # Ejecutar escaneos rápidos concurrentes
+            nmap_res = run_cmd(["nmap", "-F", "-T4", clean_target])
+            whatweb_res = run_cmd(["whatweb", f"http://{clean_target}"])
+            headers_res = run_cmd(["curl", "-I", "-s", "-L", f"https://{clean_target}"])
+            sub_res = run_cmd(["assetfinder", "--subs-only", clean_target], timeout=8)
+
+            self._send_json({
+                "nmap": nmap_res,
+                "whatweb": whatweb_res,
+                "headers": headers_res,
+                "subdomains": sub_res,
             })
             return
 
