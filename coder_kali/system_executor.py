@@ -66,14 +66,16 @@ class SystemExecutor:
         self.is_linux = platform.system() == "Linux"
 
     def parse_actions(self, text: str) -> List[ParsedAction]:
-        """Extrae todas las acciones XML en el texto de la IA en orden de aparición."""
+        """Extrae todas las acciones (XML o JSON) en el texto de la IA en orden de aparición."""
         actions: List[ParsedAction] = []
+        seen_commands = set()
 
-        # Buscar comandos
+        # 1. Buscar comandos en etiquetas XML estándar <ejecutar_comando>
         for match in COMMAND_REGEX.finditer(text):
             cmd = match.group(1).strip()
-            if not cmd:
+            if not cmd or cmd in seen_commands:
                 continue
+            seen_commands.add(cmd)
             is_sudo = bool(re.search(r"\bsudo\b", cmd))
             is_dangerous = any(re.search(pat, cmd) for pat in CRITICAL_PATTERNS)
             actions.append(
@@ -85,11 +87,42 @@ class SystemExecutor:
                 )
             )
 
-        # Buscar creación de archivos
+        # 2. Buscar comandos en formato JSON emitidos por modelos OSS / Groq (ej: {"cmd": ["bash", "-lc", "..."]})
+        json_cmd_regex = re.compile(r'\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(?:\[[^\]]*\]|"[^"]*")[^{}]*\}', re.DOTALL)
+        for match in json_cmd_regex.finditer(text):
+            try:
+                raw_json = match.group(0)
+                data = json.loads(raw_json)
+                cmd_val = data.get("cmd") or data.get("command") or data.get("exec") or data.get("bash")
+                cmd_str = ""
+                if isinstance(cmd_val, list):
+                    if len(cmd_val) >= 3 and cmd_val[0] in ["bash", "sh", "/bin/bash", "/bin/sh"] and cmd_val[1] in ["-c", "-lc"]:
+                        cmd_str = cmd_val[2]
+                    else:
+                        cmd_str = " ".join(cmd_val)
+                elif isinstance(cmd_val, str):
+                    cmd_str = cmd_val
+
+                cmd_str = cmd_str.strip()
+                if cmd_str and cmd_str not in seen_commands:
+                    seen_commands.add(cmd_str)
+                    is_sudo = bool(re.search(r"\bsudo\b", cmd_str))
+                    is_dangerous = any(re.search(pat, cmd_str) for pat in CRITICAL_PATTERNS)
+                    actions.append(
+                        ParsedAction(
+                            action_type="command",
+                            content=cmd_str,
+                            is_sudo=is_sudo,
+                            is_dangerous=is_dangerous,
+                        )
+                    )
+            except Exception:
+                continue
+
+        # 3. Buscar creación de archivos <escribir_archivo>
         for match in FILE_REGEX.finditer(text):
             path = match.group(1) or match.group(2) or match.group(3)
             file_content = match.group(4)
-            # Limpiar primer salto de línea si existe
             if file_content.startswith("\n"):
                 file_content = file_content[1:]
             actions.append(
