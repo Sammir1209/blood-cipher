@@ -247,6 +247,13 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
         }
 
+        .session-item .session-item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
         .session-item .s-title {
             font-size: 0.85rem;
             font-weight: 600;
@@ -254,6 +261,42 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .btn-del-session {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+
+        .session-item:hover .btn-del-session {
+            opacity: 1;
+        }
+
+        .btn-del-session:hover {
+            color: var(--accent-red);
+            background: rgba(255, 51, 102, 0.15);
+            transform: scale(1.15);
+        }
+
+        .btn-del-all {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.72rem;
+            transition: all 0.2s;
+        }
+
+        .btn-del-all:hover {
+            color: var(--accent-red);
         }
 
         .session-item .s-meta {
@@ -851,8 +894,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         </div>
 
         <div class="section-header">
-            <span><i class="fa-solid fa-clock-rotate-left"></i> Sesiones Previas</span>
-            <span id="sessionCount" style="color: var(--accent-cyan);">0</span>
+            <span><i class="fa-solid fa-clock-rotate-left"></i> Sesiones (<span id="sessionCount" style="color: var(--accent-cyan);">0</span>)</span>
+            <button class="btn-del-all" title="Limpiar todas las sesiones" onclick="clearAllSessions()"><i class="fa-solid fa-trash"></i> Vaciar</button>
         </div>
 
         <div class="session-list" id="sessionList">
@@ -1079,7 +1122,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     item.className = `session-item ${s.id === currentSessionId ? 'active' : ''}`;
                     item.onclick = () => loadSession(s.id);
                     item.innerHTML = `
-                        <div class="s-title"><i class="fa-regular fa-message" style="color: var(--accent-cyan); margin-right: 6px;"></i>${s.title}</div>
+                        <div class="session-item-row">
+                            <div class="s-title"><i class="fa-regular fa-message" style="color: var(--accent-cyan); margin-right: 6px;"></i>${escapeHtml(s.title)}</div>
+                            <button class="btn-del-session" title="Eliminar sesión" onclick="deleteSession(event, '${s.id}')"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                         <div class="s-meta">
                             <span>${s.model.split('/').pop()}</span>
                             <span>${s.message_count} msgs</span>
@@ -1088,6 +1134,31 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                     list.appendChild(item);
                 });
             } catch (e) { console.error(e); }
+        }
+
+        async function deleteSession(e, id) {
+            e.stopPropagation();
+            if (!confirm("¿Deseas eliminar permanentemente esta sesión?")) return;
+            try {
+                await fetch(`/api/sessions?action=delete&id=${id}`, { method: 'POST' });
+                if (currentSessionId === id) {
+                    startNewSession();
+                } else {
+                    loadSessions();
+                }
+            } catch (err) {
+                alert("Error al eliminar sesión: " + err);
+            }
+        }
+
+        async function clearAllSessions() {
+            if (!confirm("¿Deseas vaciar TODO el historial de sesiones guardadas?")) return;
+            try {
+                await fetch('/api/sessions?action=clear_all', { method: 'POST' });
+                startNewSession();
+            } catch (err) {
+                alert("Error al vaciar historial: " + err);
+            }
         }
 
         async function loadSession(id) {
@@ -1596,6 +1667,28 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
                     config_mgr.set("model", model.strip())
 
             self._send_json({"success": True})
+            return
+
+        elif path == "/api/sessions":
+            action = query.get("action", [None])[0]
+            session_mgr = SessionManager()
+
+            if action == "delete":
+                sess_id = query.get("id", [None])[0] or data.get("id")
+                if sess_id:
+                    session_mgr.delete_session(sess_id)
+                    self._send_json({"success": True, "deleted": sess_id})
+                    return
+                else:
+                    self.send_error(400, "Falta el id de sesión")
+                    return
+            elif action == "clear_all":
+                for s in session_mgr.list_sessions():
+                    session_mgr.delete_session(s.id)
+                self._send_json({"success": True})
+                return
+
+            self.send_error(400, "Acción desconocida")
             return
 
         elif path == "/api/discover_models":
