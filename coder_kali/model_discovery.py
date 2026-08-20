@@ -107,3 +107,7 @@ def fetch_live_models(provider: str, api_key: str, api_base: Optional[str] = Non
         pass
 
     return []
+
+
+# Alias de conveniencia
+fetch_online_models = fetch_live_models
