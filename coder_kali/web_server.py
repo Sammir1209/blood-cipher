@@ -36,6 +36,9 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         :root {
             --bg-base: #020408;
@@ -526,6 +529,138 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             border: 1px solid var(--border);
             color: var(--text-main);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Rich Markdown Typography & Styles */
+        .msg-body h1, .msg-body h2, .msg-body h3, .msg-body h4 {
+            color: #ffffff;
+            font-weight: 800;
+            margin: 16px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .msg-body h1 { font-size: 1.25rem; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; }
+        .msg-body h2 { font-size: 1.12rem; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 5px; }
+        .msg-body h3 { font-size: 1.02rem; color: var(--accent-silver); }
+        .msg-body h4 { font-size: 0.92rem; color: var(--accent-green); }
+
+        .msg-body p {
+            margin-bottom: 12px;
+            line-height: 1.7;
+        }
+
+        .msg-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .msg-body ul, .msg-body ol {
+            margin: 8px 0 14px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .msg-body li {
+            line-height: 1.6;
+        }
+
+        .msg-body strong {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .msg-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            background: #050811;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .msg-body th, .msg-body td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+
+        .msg-body th {
+            background: #0e1526;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .msg-body tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .msg-body tr:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .msg-body blockquote {
+            border-left: 3px solid var(--accent-green);
+            background: rgba(0, 255, 157, 0.05);
+            padding: 10px 16px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: #cbd5e1;
+            font-size: 0.92rem;
+        }
+
+        .msg-body code {
+            font-family: var(--font-code);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--accent-green);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .msg-body pre {
+            background: #000000;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 12px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .msg-body pre code {
+            background: transparent;
+            color: #ffffff;
+            padding: 0;
+            border: none;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .msg-body hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            margin: 18px 0;
+        }
+
+        .msg-body a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent-cyan);
+        }
+
+        .msg-body a:hover {
+            color: #ffffff;
+            border-bottom-style: solid;
         }
 
         /* Implementation Plan Card (Antigravity Style) */
@@ -1255,33 +1390,51 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-msg ${role}`;
 
-            let formatted = rawContent;
+            if (role === 'user') {
+                msgDiv.innerHTML = `
+                    <div class="msg-header"><i class="fa-solid fa-user-shield"></i> OPERADOR</div>
+                    <div class="msg-body">${escapeHtml(rawContent).replace(/\n/g, '<br>')}</div>
+                `;
+                stream.appendChild(msgDiv);
+                stream.scrollTop = stream.scrollHeight;
+                return;
+            }
 
-            // 1. Detectar Plan de Acción XML y renderizar tarjeta con botón PROCEED
-            formatted = formatted.replace(/<plan_de_accion>([\s\S]*?)<\/plan_de_accion>/g, function(match, planText) {
-                return `<div class="plan-card">
+            let text = rawContent || '';
+            const placeholders = {};
+            let pIndex = 0;
+
+            // 1. Extraer planes de acción
+            text = text.replace(/<plan_de_accion>([\s\S]*?)<\/plan_de_accion>/g, function(match, planText) {
+                const key = `%%PLAN_BLOCK_${pIndex++}%%`;
+                const renderedPlan = typeof marked !== 'undefined' ? marked.parse(planText.trim()) : escapeHtml(planText.trim());
+                placeholders[key] = `<div class="plan-card">
                     <div class="plan-card-header">
                         <h3><i class="fa-solid fa-list-check"></i> PLAN DE IMPLEMENTACIÓN TÁCTICO</h3>
                         <span class="badge-pill badge-engine">ESPERANDO AUTORIZACIÓN</span>
                     </div>
-                    <div class="plan-card-content">${escapeHtml(planText.trim())}</div>
+                    <div class="plan-card-content">${renderedPlan}</div>
                     <button class="btn-proceed" onclick="proceedWithPlan()"><i class="fa-solid fa-bolt"></i> PROCEED / AUTORIZAR Y EJECUTAR</button>
                 </div>`;
+                return `\n\n${key}\n\n`;
             });
 
-            // 2. Formatear etiquetas XML <ejecutar_comando>
-            formatted = formatted.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
-                return `<div class="terminal-box">
+            // 2. Extraer comandos XML <ejecutar_comando>
+            text = text.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
+                const key = `%%CMD_BLOCK_${pIndex++}%%`;
+                const cleanCmd = cmd.trim();
+                placeholders[key] = `<div class="terminal-box">
                     <div class="terminal-box-header">
-                        <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EJECUTADO</span>
-                        <span class="badge-run">BASH</span>
+                        <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EN TERMINAL</span>
+                        <span class="badge-run">EJECUTADO</span>
                     </div>
-                    <div class="terminal-box-code">${escapeHtml(cmd.trim())}</div>
+                    <div class="terminal-box-code">${escapeHtml(cleanCmd)}</div>
                 </div>`;
+                return `\n\n${key}\n\n`;
             });
 
-            // 3. Formatear llamadas JSON crudas (ej: {"cmd": ["bash", "-lc", "..."]})
-            formatted = formatted.replace(/\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(\[[^\]]*\]|"[^"]*")[^{}]*\}/g, function(match) {
+            // 3. Extraer llamadas JSON crudas (ej: {"cmd": [...]})
+            text = text.replace(/\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(\[[^\]]*\]|"[^"]*")[^{}]*\}/g, function(match) {
                 try {
                     let parsed = JSON.parse(match);
                     let cmdVal = parsed.cmd || parsed.command || parsed.bash || parsed.exec;
@@ -1296,26 +1449,49 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                         cmdStr = cmdVal;
                     }
                     if (cmdStr) {
-                        return `<div class="terminal-box">
+                        const key = `%%JSON_BLOCK_${pIndex++}%%`;
+                        placeholders[key] = `<div class="terminal-box">
                             <div class="terminal-box-header">
-                                <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EJECUTADO</span>
-                                <span class="badge-run">BASH</span>
+                                <span class="tag"><i class="fa-solid fa-terminal"></i> COMANDO EN TERMINAL</span>
+                                <span class="badge-run">EJECUTADO</span>
                             </div>
                             <div class="terminal-box-code">${escapeHtml(cmdStr.trim())}</div>
                         </div>`;
+                        return `\n\n${key}\n\n`;
                     }
                 } catch(e) {}
                 return match;
             });
 
-            formatted = formatted.replace(/\n/g, '<br>');
+            // 4. Renderizar Markdown con marked.js
+            let parsedHtml = '';
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true
+                });
+                parsedHtml = marked.parse(text);
+            } else {
+                parsedHtml = escapeHtml(text).replace(/\n/g, '<br>');
+            }
+
+            // 5. Reemplazar los placeholders por sus componentes HTML
+            for (const [key, val] of Object.entries(placeholders)) {
+                parsedHtml = parsedHtml.replace(new RegExp(key, 'g'), val);
+            }
 
             msgDiv.innerHTML = `
-                <div class="msg-header">${role === 'user' ? '<i class="fa-solid fa-user-shield"></i> OPERADOR' : '<i class="fa-solid fa-shield-halved"></i> CODER-KALI'}</div>
-                <div class="msg-body">${formatted}</div>
+                <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI</div>
+                <div class="msg-body">${parsedHtml}</div>
             `;
             stream.appendChild(msgDiv);
             stream.scrollTop = stream.scrollHeight;
+
+            if (typeof hljs !== 'undefined') {
+                msgDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
         }
 
         function escapeHtml(text) {
