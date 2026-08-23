@@ -115,7 +115,12 @@ class OllamaFastClient:
         }
 
         body = fast_json_dumps(payload)
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Bypass-Tunnel-Reminder": "true",
+            "bypass-tunnel-reminder": "1",
+            "User-Agent": "BloodCipher/1.5",
+        }
 
         try:
             res = requests.post(
@@ -126,6 +131,8 @@ class OllamaFastClient:
             )
             if res.status_code == 200:
                 data = fast_json_loads(res.content)
+                if not isinstance(data, dict):
+                    return {"error": f"Respuesta no JSON de la API: {res.text[:200]}"}
                 return {
                     "content": data.get("message", {}).get("content", ""),
                     "model": data.get("model", clean_model),
