@@ -1,9 +1,9 @@
 {
-  "name": "coder-kali-vscode",
-  "displayName": "Coder-Kali: AI Cybersecurity & DevOps Assistant",
-  "description": "Puente visual de VS Code para interactuar con el agente Coder-Kali en Linux.",
-  "version": "1.0.0",
-  "publisher": "coder-kali",
+  "name": "blood-cipher-vscode",
+  "displayName": "Blood-Cipher: AI Hacktivism, OSINT & Security Assistant",
+  "description": "Visual bridge for Blood-Cipher autonomous tactical AI agent in Linux.",
+  "version": "1.5.0",
+  "publisher": "blood-cipher",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -16,26 +16,26 @@
   "contributes": {
     "commands": [
       {
-        "command": "coder-kali.openChat",
-        "title": "Coder-Kali: Abrir Terminal de Chat Interactiva",
+        "command": "blood-cipher.openChat",
+        "title": "Blood-Cipher: Abrir Terminal de Chat Interactiva",
         "icon": "$(terminal)"
       },
       {
-        "command": "coder-kali.auditFile",
-        "title": "Coder-Kali: Auditar Archivo Actual con IA",
+        "command": "blood-cipher.auditFile",
+        "title": "Blood-Cipher: Auditar Archivo Actual con IA",
         "icon": "$(shield)"
       },
       {
-        "command": "coder-kali.openConfig",
-        "title": "Coder-Kali: Configurar Modelos y API Keys",
+        "command": "blood-cipher.openConfig",
+        "title": "Blood-Cipher: Configurar Modelos y API Keys",
         "icon": "$(gear)"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "coder-kali.auditFile",
-          "group": "coder-kali@1"
+          "command": "blood-cipher.auditFile",
+          "group": "blood-cipher@1"
         }
       ]
     }

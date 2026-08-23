@@ -179,7 +179,7 @@ class KaliAgent:
             retry_count = 0
 
             while retry_count < max_retries:
-                with console.status("[bold cyan]Coder-Kali está pensando...[/bold cyan]", spinner="dots"):
+                with console.status("[bold cyan]Blood-Cipher está pensando...[/bold cyan]", spinner="dots"):
                     try:
                         import litellm
                         import time

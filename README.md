@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-v1.5.0-red.svg?style=for-the-badge)](https://github.com/Sammir1209/coder-kali)
+[![Version](https://img.shields.io/badge/Version-v1.5.0-red.svg?style=for-the-badge)](https://github.com/Sammir1209/blood-cipher)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20BlackArch%20%7C%20Arch%20%7C%20Debian%20%7C%20Ubuntu-557C94.svg?style=for-the-badge&logo=linux&logoColor=white)](https://www.kali.org/)
 [![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
@@ -81,7 +81,7 @@ bash install.sh
 El script de instalación:
 1. Configura un entorno virtual aislado en `~/.local/share/blood-cipher/env`.
 2. Instala todas las dependencias (`rich`, `typer`, `litellm`, `questionary`, etc.).
-3. Crea los ejecutables globales `blood-cipher` y `coder-kali`.
+3. Crea el ejecutable global `blood-cipher`.
 
 ---
 
@@ -152,7 +152,7 @@ blood-cipher doctor
 ## [06] Seguridad, Privacidad y Autorización
 
 - **Control de Ejecución:** Ningún comando generado por la IA se ejecuta en el sistema sin la confirmación interactiva del operador.
-- **Aislamiento Local:** Las claves API y el historial de sesiones se almacenan exclusivamente de manera local en `~/.config/coder-kali/`.
+- **Aislamiento Local:** Las claves API y el historial de sesiones se almacenan exclusivamente de manera local en `~/.config/blood-cipher/`.
 - **Integración Segura con `sudo`:** La terminal PTY integrada gestiona las solicitudes de privilegios sin registrar ni exponer contraseñas en texto claro.
 
 ---

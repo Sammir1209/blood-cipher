@@ -15,7 +15,9 @@ from rich.console import Console
 
 console = Console()
 
-CONFIG_DIR = Path.home() / ".config" / "coder-kali"
+CONFIG_DIR = Path.home() / ".config" / "blood-cipher"
+if not CONFIG_DIR.exists() and (Path.home() / ".config" / "coder-kali").exists():
+    CONFIG_DIR = Path.home() / ".config" / "coder-kali"
 TOOLS_CACHE_FILE = CONFIG_DIR / "kali_tools.json"
 BASE_KALI_TOOLS_URL = "https://www.kali.org/tools/"
 BASE_BLACKARCH_TOOLS_URL = "https://blackarch.org/tools.html"

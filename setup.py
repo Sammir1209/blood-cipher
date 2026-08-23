@@ -57,7 +57,6 @@ setup(
     entry_points={
         "console_scripts": [
             "blood-cipher=coder_kali.cli:main",
-            "coder-kali=coder_kali.cli:main",
         ],
     },
     include_package_data=True,

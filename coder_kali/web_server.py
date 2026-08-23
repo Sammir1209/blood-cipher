@@ -1,5 +1,5 @@
 """
-coder_kali/web_server.py - Centro de Operaciones Visual y Web UI Táctica para Coder-Kali.
+coder_kali/web_server.py - Centro de Operaciones Visual y Web UI Táctica para Blood-Cipher.
 Diseño Negro y Blanco con Ave Fénix de Código, Modo Planificación con botón PROCEED, confirmaciones modales y streaming en tiempo real.
 """
 
@@ -2372,7 +2372,7 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
 
 
 def start_web_server(port: int = 7777, open_browser: bool = True):
-    """Inicia el servidor Web Dashboard de Coder-Kali."""
+    """Inicia el servidor Web Dashboard de Blood-Cipher."""
     server_address = ("127.0.0.1", port)
     try:
         httpd = HTTPServer(server_address, CoderKaliHTTPHandler)

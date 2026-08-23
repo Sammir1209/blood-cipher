@@ -10,7 +10,10 @@ from rich.console import Console
 
 console = Console()
 
-CONFIG_DIR = Path.home() / ".config" / "coder-kali"
+CONFIG_DIR = Path.home() / ".config" / "blood-cipher"
+if not CONFIG_DIR.exists() and (Path.home() / ".config" / "coder-kali").exists():
+    CONFIG_DIR = Path.home() / ".config" / "coder-kali"
+
 SCOPES_DIR = CONFIG_DIR / "scopes"
 ACTIVE_SCOPE_FILE = CONFIG_DIR / "active_scope.txt"
 

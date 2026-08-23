@@ -54,7 +54,7 @@ SYSTEM_BIN="/usr/local/bin"
 echo -e "${CYAN}[*] Preparando entorno virtual aislado en ${BOLD}$VENV_DIR${NC}..."
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$BIN_DIR"
-mkdir -p "$HOME/.config/coder-kali"
+mkdir -p "$HOME/.config/blood-cipher"
 
 # Crear venv si no existe
 if [ ! -d "$VENV_DIR" ]; then
@@ -86,23 +86,21 @@ exec "$VENV_DIR/bin/blood-cipher" "\$@"
 EOF
 chmod +x "$LAUNCHER"
 
-# 6. Crear enlaces simbólicos
+# 6. Crear enlace simbólico
 SYMLINK_SUCCESS=false
 
 # Intentar en /usr/local/bin con sudo si es posible, o en ~/.local/bin
 if [ -w "$SYSTEM_BIN" ]; then
     ln -sf "$LAUNCHER" "$SYSTEM_BIN/blood-cipher"
-    ln -sf "$LAUNCHER" "$SYSTEM_BIN/coder-kali"
     SYMLINK_SUCCESS=true
     LINK_PATH="$SYSTEM_BIN/blood-cipher"
 else
     echo -e "${YELLOW}[*] Solicitando permisos para crear symlink en /usr/local/bin (opcional)...${NC}"
-    if sudo ln -sf "$LAUNCHER" "$SYSTEM_BIN/blood-cipher" 2>/dev/null && sudo ln -sf "$LAUNCHER" "$SYSTEM_BIN/coder-kali" 2>/dev/null; then
+    if sudo ln -sf "$LAUNCHER" "$SYSTEM_BIN/blood-cipher" 2>/dev/null; then
         SYMLINK_SUCCESS=true
         LINK_PATH="$SYSTEM_BIN/blood-cipher"
     else
         ln -sf "$LAUNCHER" "$BIN_DIR/blood-cipher"
-        ln -sf "$LAUNCHER" "$BIN_DIR/coder-kali"
         SYMLINK_SUCCESS=true
         LINK_PATH="$BIN_DIR/blood-cipher"
         echo -e "${YELLOW}[i] Se creó el acceso en $BIN_DIR/blood-cipher${NC}"
@@ -130,7 +128,7 @@ echo -e "${NC}"
 echo -e "${GREEN}${BOLD}================================================================${NC}"
 echo -e "${GREEN}${BOLD}   ✓ ¡BLOOD-CIPHER v1.5 SE INSTALÓ CON ÉXITO EN TU SISTEMA!   ${NC}"
 echo -e "${GREEN}${BOLD}================================================================${NC}"
-echo -e "${CYAN}Ejecutable vinculado en:${NC} ${BOLD}$LINK_PATH${NC} (y alias 'coder-kali')"
+echo -e "${CYAN}Ejecutable vinculado en:${NC} ${BOLD}$LINK_PATH${NC}"
 echo ""
 echo -e "${BOLD}${YELLOW}🚀 COMANDOS PRINCIPALES:${NC}"
 echo -e "  ${GREEN}blood-cipher${NC}               ➔ Inicia el agente en modo interactivo"

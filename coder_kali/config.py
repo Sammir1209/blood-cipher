@@ -1,6 +1,6 @@
 """
 coder_kali/config.py - Gestor de Configuración, Credenciales y Modelos.
-Almacena la configuración en ~/.config/coder-kali/config.json con permisos seguros.
+Almacena la configuración en ~/.config/blood-cipher/config.json con permisos seguros.
 """
 
 import os
@@ -10,7 +10,10 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-CONFIG_DIR = Path.home() / ".config" / "coder-kali"
+CONFIG_DIR = Path.home() / ".config" / "blood-cipher"
+if not CONFIG_DIR.exists() and (Path.home() / ".config" / "coder-kali").exists():
+    CONFIG_DIR = Path.home() / ".config" / "coder-kali"
+
 CONFIG_FILE = CONFIG_DIR / "config.json"
 SECRET_KEY_FILE = CONFIG_DIR / ".secret.key"
 

@@ -38,8 +38,8 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 app = typer.Typer(
-    name="coder-kali",
-    help="Agente de IA de Elite para Ciberseguridad, Hacking Etico y Auditorias.",
+    name="blood-cipher",
+    help="Blood-Cipher - Agente de IA para Hacktivismo, OSINT y Auditorias en Linux.",
     add_completion=False,
 )
 console = Console()
@@ -163,7 +163,7 @@ def interactive_scope_menu(scope_mgr: ScopeManager):
 
         elif action == "CLEAR":
             scope_mgr.clear_active_scope()
-            console.print("[bold yellow][✓] Alcance desactivado. Coder-Kali vuelve a operar en modo libre.[/bold yellow]")
+            console.print("[bold yellow][✓] Alcance desactivado. Blood-Cipher vuelve a operar en modo libre.[/bold yellow]")
 
         elif action == "DELETE":
             scopes = scope_mgr.list_scopes()
@@ -180,19 +180,19 @@ def interactive_scope_menu(scope_mgr: ScopeManager):
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
-    version: bool = typer.Option(False, "--version", "-v", help="Muestra la versión de Coder-Kali."),
+    version: bool = typer.Option(False, "--version", "-v", help="Muestra la versión de Blood-Cipher."),
     new_session: bool = typer.Option(False, "--new", "-n", help="Inicia una nueva sesión sin preguntar por el historial."),
 ):
-    """Comando por defecto cuando se invoca coder-kali sin argumentos."""
+    """Comando por defecto cuando se invoca blood-cipher sin argumentos."""
     if version:
-        console.print(f"[bold cyan]coder-kali[/bold cyan] versión [bold green]{__version__}[/bold green]")
+        console.print(f"[bold cyan]blood-cipher[/bold cyan] versión [bold green]{__version__}[/bold green]")
         raise typer.Exit()
 
     if ctx.invoked_subcommand is None:
         chat(new_session=new_session)
 
 
-@app.command(name="chat", help="Inicia una sesión de chat interactiva en vivo con Coder-Kali.")
+@app.command(name="chat", help="Inicia una sesión de chat interactiva en vivo con Blood-Cipher.")
 def chat(
     new_session: bool = typer.Option(False, "--new", "-n", help="Inicia una nueva sesión sin preguntar por el historial.")
 ):
@@ -203,7 +203,7 @@ def chat(
 
     # Si no está configurado, ofrecer wizard inicial
     if not config_mgr.is_configured():
-        console.print("[yellow][!] Coder-Kali no tiene un proveedor de IA o API Key configurada.[/yellow]")
+        console.print("[yellow][!] Blood-Cipher no tiene un proveedor de IA o API Key configurada.[/yellow]")
         console.print("[cyan][*] Iniciando asistente de configuración inicial...[/cyan]")
         configured = interactive_config_wizard(config_mgr)
         if not configured:
@@ -235,7 +235,7 @@ def chat(
 
     while True:
         try:
-            user_input = Prompt.ask("[bold bright_green]coder-kali >[/bold bright_green]")
+            user_input = Prompt.ask("[bold bright_green]blood-cipher >[/bold bright_green]")
             if not user_input or not user_input.strip():
                 continue
 
@@ -274,23 +274,23 @@ def chat(
                 _interactive_creds_menu()
                 continue
             elif cleaned_cmd in ["vulns", "vulnerabilidades", "scan"]:
-                console.print("[bold cyan][*] Usa 'coder-kali audit vulns <target>' desde la terminal o escribe tu solicitud de auditoría aquí.[/bold cyan]")
+                console.print("[bold cyan][*] Usa 'blood-cipher audit vulns <target>' desde la terminal o escribe tu solicitud de auditoría aquí.[/bold cyan]")
                 continue
             elif cleaned_cmd in ["network", "red", "net"]:
-                console.print("[bold cyan][*] Usa 'coder-kali audit network <target>' desde la terminal o escribe tu solicitud de red aquí.[/bold cyan]")
+                console.print("[bold cyan][*] Usa 'blood-cipher audit network <target>' desde la terminal o escribe tu solicitud de red aquí.[/bold cyan]")
                 continue
             elif cleaned_cmd in ["ayuda", "help"]:
                 console.print("""
 [bold cyan]Comandos de la sesión:[/bold cyan]
-  [green]exit / quit[/green]     - Guardar y salir de Coder-Kali
+  [green]exit / quit[/green]     - Guardar y salir de Blood-Cipher
   [green]scope[/green]           - Gestionar y cargar documentos de alcance (SOW / ROE)
   [green]historial[/green]       - Ver y cambiar entre chats anteriores
   [green]new / nuevo[/green]     - Iniciar un nuevo chat limpio
   [green]clear[/green]           - Limpiar la pantalla de la terminal
   [green]config[/green]          - Cambiar de modelo o API Key
-  [bold green]creds[/bold green]           - 🔑 Abrir auditoría de credenciales y hashes
-  [bold green]vulns[/bold green]           - 🛡️ Escaneo de vulnerabilidades
-  [bold green]network[/bold green]         - 🌐 Pruebas y auditoría de red
+  [bold green]creds[/bold green]           - Abrir auditoría de credenciales y hashes
+  [bold green]vulns[/bold green]           - Escaneo de vulnerabilidades
+  [bold green]network[/bold green]         - Pruebas y auditoría de red
   [green]ayuda[/green]           - Mostrar este mensaje de ayuda
                 """)
                 continue
@@ -302,7 +302,7 @@ def chat(
             agent.send_message(user_input)
 
         except (KeyboardInterrupt, EOFError):
-            console.print("\n[bold cyan]Sesión guardada y finalizada. Cerrando Coder-Kali...[/bold cyan]")
+            console.print("\n[bold cyan]Sesión guardada y finalizada. Cerrando Blood-Cipher...[/bold cyan]")
             break
         except Exception as e:
             render_error("Excepción en la sesión", str(e))
@@ -337,7 +337,7 @@ def history(
         return
 
     import time
-    table = Table(title="📜 Historial de Sesiones Coder-Kali", border_style="cyan")
+    table = Table(title="Historial de Sesiones Blood-Cipher", border_style="cyan")
     table.add_column("ID", style="bold green", width=10)
     table.add_column("Título / Primera Petición", style="bold white")
     table.add_column("Proveedor / Modelo", style="cyan")
@@ -356,7 +356,7 @@ def history(
         )
 
     console.print(table)
-    console.print("\n[dim]Para reanudar un chat específico ejecuta: coder-kali (y selecciónalo del menú interactivo)[/dim]")
+    console.print("\n[dim]Para reanudar un chat específico ejecuta: blood-cipher (y selecciónalo del menú interactivo)[/dim]")
 
 
 @app.command(name="scope", help="🎯 Administra documentos de alcance de trabajo (SOW / ROE) y autorizaciones.")
@@ -375,7 +375,7 @@ def scope_command(
 
     if clear:
         scope_mgr.clear_active_scope()
-        console.print("[bold yellow][✓] Alcance desactivado. Coder-Kali vuelve a operar en modo libre.[/bold yellow]")
+        console.print("[bold yellow][✓] Alcance desactivado. Blood-Cipher vuelve a operar en modo libre.[/bold yellow]")
         return
 
     if set_scope:
@@ -409,26 +409,26 @@ def scope_command(
     interactive_scope_menu(scope_mgr)
 
 
-@app.command(name="web", help="🌐 Inicia el Centro de Operaciones Visual / Dashboard Web en el navegador.")
+@app.command(name="web", help="Inicia el Centro de Operaciones Visual / Dashboard Web en el navegador.")
 def web_dashboard(
     port: int = typer.Option(7777, "--port", "-p", help="Puerto HTTP para el servidor web local."),
     no_open: bool = typer.Option(False, "--no-open", help="No abrir automáticamente el navegador."),
 ):
-    """Lanza la interfaz web táctica de Coder-Kali en el navegador."""
+    """Lanza la interfaz web táctica de Blood-Cipher en el navegador."""
     from coder_kali.web_server import start_web_server
     config_mgr = ConfigManager()
     if not config_mgr.is_configured():
-        console.print("[yellow][!] Se recomienda configurar una API Key primero con 'coder-kali config'.[/yellow]")
+        console.print("[yellow][!] Se recomienda configurar una API Key primero con 'blood-cipher config'.[/yellow]")
 
     start_web_server(port=port, open_browser=not no_open)
 
 
-@app.command(name="ui", help="🌐 Alias para 'coder-kali web' (Panel Gráfico Web).")
+@app.command(name="ui", help="Alias para 'blood-cipher web' (Panel Gráfico Web).")
 def ui_dashboard(
     port: int = typer.Option(7777, "--port", "-p", help="Puerto HTTP para el servidor web local."),
     no_open: bool = typer.Option(False, "--no-open", help="No abrir automáticamente el navegador."),
 ):
-    """Alias de coder-kali web."""
+    """Alias de blood-cipher web."""
     web_dashboard(port=port, no_open=no_open)
 
 
@@ -439,7 +439,7 @@ def run_command_line(
     """Ejecución de un solo disparo desde la terminal."""
     config_mgr = ConfigManager()
     if not config_mgr.is_configured():
-        console.print("[yellow][!] Configura primero Coder-Kali ejecutando 'coder-kali config'.[/yellow]")
+        console.print("[yellow][!] Configura primero Blood-Cipher ejecutando 'blood-cipher config'.[/yellow]")
         raise typer.Exit(1)
 
     agent = KaliAgent(config_mgr=config_mgr)
@@ -568,7 +568,7 @@ def info_tool(
 
     if not tool:
         console.print(f"[red][!] La herramienta '{name}' no está en la base de datos local.[/red]")
-        console.print(f"[dim]Puedes sincronizar la base completa con: coder-kali tools sync[/dim]")
+        console.print(f"[dim]Puedes sincronizar la base completa con: blood-cipher tools sync[/dim]")
         return
 
     console.print()
@@ -609,22 +609,22 @@ def sync_tools(
         db.scrape_blackarch_org(limit=limit, verbose=True)
 
 
-@app.command(name="update", help="Actualiza Coder-Kali a la ultima version disponible desde GitHub.")
+@app.command(name="update", help="Actualiza Blood-Cipher a la ultima version disponible desde GitHub.")
 def update():
-    """Descarga e instala la versión más reciente de Coder-Kali desde el repositorio oficial."""
+    """Descarga e instala la versión más reciente de Blood-Cipher desde el repositorio oficial."""
     import subprocess
     from pathlib import Path
     from rich.panel import Panel
 
     console.print()
-    console.print(Panel("[bold cyan]Buscando actualizaciones de Coder-Kali en GitHub...[/bold cyan]", border_style="cyan"))
+    console.print(Panel("[bold cyan]Buscando actualizaciones de Blood-Cipher en GitHub...[/bold cyan]", border_style="cyan"))
 
     repo_dir = Path(__file__).resolve().parent.parent
     git_dir = repo_dir / ".git"
 
     if not git_dir.exists():
         console.print(f"[yellow][!] El directorio {repo_dir} no es un repositorio Git válido.[/yellow]")
-        console.print("[dim]Puedes reinstalar con: git clone https://github.com/Sammir1209/coder-kali.git && bash install.sh[/dim]")
+        console.print("[dim]Puedes reinstalar con: git clone https://github.com/Sammir1209/blood-cipher.git && bash install.sh[/dim]")
         return
 
     try:
@@ -640,13 +640,13 @@ def update():
 
         output_str = pull_res.stdout.strip()
         if "Already up to date" in output_str or "Ya está actualizado" in output_str:
-            console.print("[bold green][✓] Coder-Kali ya está en la versión más reciente.[/bold green]")
+            console.print("[bold green][✓] Blood-Cipher ya está en la versión más reciente.[/bold green]")
         else:
             console.print("[bold green][✓] ¡Actualización descargada exitosamente![/bold green]")
             console.print(f"[dim]{output_str}[/dim]")
 
             # 2. Actualizar dependencias si es un entorno virtual
-            venv_pip = Path.home() / ".local" / "share" / "coder-kali" / "env" / "bin" / "pip"
+            venv_pip = Path.home() / ".local" / "share" / "blood-cipher" / "env" / "bin" / "pip"
             if venv_pip.exists():
                 with console.status("[bold cyan]Actualizando dependencias del entorno virtual...[/bold cyan]", spinner="dots"):
                     subprocess.run(
@@ -658,7 +658,7 @@ def update():
                         capture_output=True,
                     )
 
-            console.print("[bold bright_green]🚀 ¡Coder-Kali se ha actualizado correctamente![/bold bright_green]")
+            console.print("[bold bright_green]🚀 ¡Blood-Cipher se ha actualizado correctamente![/bold bright_green]")
 
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red][!] Error al actualizar desde Git: {e.stderr.strip()}[/bold red]")

@@ -12,13 +12,13 @@ console = Console()
 
 
 def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
-    """Guía al usuario paso a paso en la configuración de Coder-Kali."""
+    """Guía al usuario paso a paso en la configuración de Blood-Cipher."""
     console.print()
     console.print(
         Panel(
-            "[bold cyan]Asistente Interactivo de Configuración de IA[/bold cyan]\n"
-            "[dim]Selecciona tu proveedor, ingresa tu API Key y elige entre los modelos activos en vivo.[/dim]",
-            title="⚙️ CONFIGURACIÓN CODER-KALI",
+            "[bold cyan]Asistente de Configuración de Modelos y Credenciales de IA[/bold cyan]\n"
+            "[dim]Elige tu proveedor preferido e introduce tu clave de API si es requerida.[/dim]",
+            title="⚙️ CONFIGURACIÓN BLOOD-CIPHER",
             border_style="cyan",
         )
     )
@@ -120,7 +120,7 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
     config_mgr.set_provider(chosen_provider, chosen_model)
 
     console.print()
-    console.print("[bold green][✓] ¡Configuración guardada correctamente en ~/.config/coder-kali/config.json![/bold green]")
+    console.print("[bold green][✓] ¡Configuración guardada correctamente en ~/.config/blood-cipher/config.json![/bold green]")
     console.print(f"[cyan]Proveedor activo:[/cyan] {chosen_provider.upper()} | [yellow]Modelo:[/yellow] {chosen_model}")
 
     # Probar conexión opcionalmente

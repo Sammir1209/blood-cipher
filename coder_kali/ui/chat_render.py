@@ -66,10 +66,10 @@ def render_user_message(message: str):
     console.print(panel)
 
 
-def render_ai_message(message: str, is_thinking: bool = False):
-    """Renderiza el razonamiento o respuesta de Coder-Kali en formato Markdown enriquecido."""
+def render_ai_message(message: str):
+    """Renderiza el razonamiento o respuesta de Blood-Cipher en formato Markdown enriquecido."""
     console.print()
-    header = Text(" 🤖 CODER-KALI ", style="bold black on bright_cyan")
+    header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
     console.print(header)
 
     # Limpiar etiquetas XML del texto visible si se desea mostrar más limpio
@@ -164,8 +164,8 @@ def render_info(message: str):
 
 
 def render_system_status(status_dict: dict):
-    """Muestra una tabla con el estado del sistema, modelos y configuración."""
-    table = Table(title="📊 Estado de Coder-Kali", box=ROUNDED, border_style="cyan")
+    """Renderiza una tabla con el estado del sistema y herramientas de diagnóstico."""
+    table = Table(title="📊 Estado de Blood-Cipher", box=ROUNDED, border_style="cyan")
     table.add_column("Propiedad", style="bold cyan")
     table.add_column("Valor", style="white")
 

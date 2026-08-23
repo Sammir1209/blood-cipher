@@ -1,5 +1,5 @@
 """
-coder_kali/prompts.py - Banco de Prompts y Mega-Prompt Maestro del Sistema Coder-Kali.
+coder_kali/prompts.py - Banco de Prompts y Mega-Prompt Maestro del Sistema Blood-Cipher.
 """
 
 MEGA_PROMPT_SISTEMA = """
