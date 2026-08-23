@@ -149,6 +149,26 @@ def test_provider_connection(config_mgr: ConfigManager) -> bool:
     console.print()
     with console.status(f"[bold cyan]Probando comunicación con {model}...[/bold cyan]", spinner="dots"):
         try:
+            if provider == "ollama":
+                from coder_kali.fast_engine import OllamaFastClient
+                fast_client = OllamaFastClient(host=api_base or "http://localhost:11434")
+                if not fast_client.is_online():
+                    console.print("[bold red][✗] El servicio de Ollama no está activo en http://localhost:11434.[/bold red]")
+                    console.print("[dim]Inicia el servicio ejecutando: 'ollama serve' o 'sudo systemctl start ollama'.[/dim]")
+                    return False
+
+                res = fast_client.chat_completion(
+                    model=model,
+                    messages=[{"role": "user", "content": "Responde únicamente 'OK'"}],
+                    timeout=180,
+                )
+                if "error" in res:
+                    console.print(f"[bold red][✗] Error de Ollama:[/bold red] {res['error']}")
+                    return False
+                reply = res.get("content", "OK (Conexión establecida)").strip()
+                console.print(f"[bold green][✓] Test exitoso. Respuesta del modelo:[/bold green] [white]{reply}[/white]")
+                return True
+
             kwargs = {
                 "model": model,
                 "messages": [{"role": "user", "content": "Responde únicamente 'OK'"}],
