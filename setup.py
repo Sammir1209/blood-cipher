@@ -11,7 +11,7 @@ setup(
     description="Blood-Cipher - Agente de IA de élite para ciberseguridad, hacking ético y auditorías en Linux (Kali, BlackArch, Arch, Debian).",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Sammir1209/coder-kali.git",
+    url="https://github.com/Sammir1209/blood-cipher.git",
     keywords=[
         "blood-cipher",
         "hacktivism",

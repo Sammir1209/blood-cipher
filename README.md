@@ -73,8 +73,8 @@ Ofrece un centro de mando unificado para operaciones tácticas:
 ### Instalación en un solo paso
 
 ```bash
-git clone https://github.com/Sammir1209/coder-kali.git
-cd coder-kali
+git clone https://github.com/Sammir1209/blood-cipher.git
+cd blood-cipher
 bash install.sh
 ```
 
