@@ -187,18 +187,20 @@ class KaliAgent:
                         # Fast-Path: Inferencia directa ultrarrápida si el modelo es Ollama
                         if provider == "ollama":
                             from coder_kali.fast_engine import OllamaFastClient
-                            ollama_client = OllamaFastClient()
+                            api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
+                            ollama_client = OllamaFastClient(host=api_base)
                             res = ollama_client.chat_completion(
                                 model=model,
                                 messages=self._get_api_messages(),
                                 temperature=self.config_mgr.get("temperature", 0.2),
+                                timeout=300,
                             )
                             if "content" in res and res["content"]:
                                 ai_content = res["content"]
                                 break
                             elif "error" in res:
-                                # Fallback a LiteLLM si falla
-                                pass
+                                render_error("Error de Inferencia Ollama", res["error"])
+                                return f"Error al comunicar con Ollama: {res['error']}"
 
                         import litellm
                         import time
