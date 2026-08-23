@@ -1,4 +1,4 @@
-# ⚡ Blood-Cipher v1.5 — Autonomous AI Tactical Agent for Hacktivism, OSINT & Linux Auditing
+# Blood-Cipher
 
 <div align="center">
 
@@ -27,31 +27,31 @@
 
 ---
 
-## 📌 Visión General
+## [01] Visión General
 
 **Blood-Cipher v1.5** es una plataforma táctica impulsada por IA diseñada para la **comunidad hacktivista, investigadores de ciberinteligencia independiente (OSINT), auditores de infraestructura y defensores de la soberanía digital**. Combina la potencia de modelos de lenguaje de última generación (**Google Gemini, Claude 3.5 Sonnet, OpenAI o1/GPT-4o, DeepSeek R1, Groq y Ollama 100% Offline**) con el arsenal técnico de **Kali Linux, BlackArch, Arch Linux, Debian y Ubuntu**.
 
 Ofrece un centro de mando unificado para operaciones tácticas:
-1. **Terminal Táctico (CLI)** con control interactivo PTY, análisis de credenciales y subcomandos de red (`blood-cipher`).
-2. **Centro de Mando Web (Dashboard)** con escaneo visual 360°, auditoría de credenciales y radar de vulnerabilidades en tiempo real.
+- **Terminal Táctico (CLI):** Control interactivo PTY, análisis de credenciales y subcomandos de red (`blood-cipher`).
+- **Centro de Mando Web (Dashboard):** Escaneo visual 360°, auditoría de credenciales y radar de vulnerabilidades en tiempo real.
 
 ---
 
-## 🌟 Características Principales
+## [02] Capacidades Principales
 
-### 🧠 1. Inteligencia Artificial Multi-Proveedor
+### [›] Inteligencia Artificial Multi-Proveedor
 - Compatible con **OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, OpenRouter** y modelos 100% locales y offline mediante **Ollama**.
 - Detección automática y conmutación ágil de modelos en caliente.
 
-### 📋 2. Modo Planificación Táctico (Planning Mode)
+### [›] Modo Planificación Táctico (Planning Mode)
 - Generación de planes de implementación paso a paso antes de ejecutar cualquier comando en el sistema.
 - Control granular con botón de autorización explícita (*Proceed / Step-by-Step*).
 
-### 🎯 3. Gestor de Alcance y Autorización (SOW / ROE)
+### [›] Gestor de Alcance y Autorización (SOW / ROE)
 - Carga y validación de documentos formales de alcance (*Statement of Work* y *Rules of Engagement*).
 - Prevención de acciones fuera del perímetro acordado durante la auditoría.
 
-### 🔐 4. Módulos Profesionales de Auditoría (`blood-cipher audit`)
+### [›] Módulos Profesionales de Auditoría (`blood-cipher audit`)
 
 | Módulo | Comando CLI | Capacidades Técnicas |
 |---|---|---|
@@ -59,12 +59,12 @@ Ofrece un centro de mando unificado para operaciones tácticas:
 | **Vulnerabilidades** | `blood-cipher audit vulns` | Escaneo automatizado con `Nuclei` y `Nikto`, auditoría SSL/TLS con `testssl.sh`, análisis profundo de cabeceras HTTP de seguridad y detección de tecnologías CMS. |
 | **Pruebas de Red** | `blood-cipher audit network` | Escaneos de puertos avanzados con Nmap (SYN, TCP, UDP, timing templates), descubrimiento de hosts por subred, detección de SO y enumeración DNS completa. |
 
-### 🧰 5. Base de Datos de Herramientas Kali / BlackArch
+### [›] Base de Datos de Herramientas Kali / BlackArch
 - Catálogo indexado de cientos de herramientas con sintaxis oficial, ejemplos prácticos de uso y flags documentados (`blood-cipher tools info <herramienta>`).
 
 ---
 
-## 🚀 Instalación
+## [03] Instalación
 
 ### Requisitos Previos
 - **Sistema Operativo:** Kali Linux, BlackArch, Debian, Ubuntu, Arch Linux u otra distribución Linux (también compatible con WSL2).
@@ -79,13 +79,13 @@ bash install.sh
 ```
 
 El script de instalación:
-1. Configura un entorno virtual aislado en `~/.local/share/coder-kali/env`.
+1. Configura un entorno virtual aislado en `~/.local/share/blood-cipher/env`.
 2. Instala todas las dependencias (`rich`, `typer`, `litellm`, `questionary`, etc.).
 3. Crea los ejecutables globales `blood-cipher` y `coder-kali`.
 
 ---
 
-## ⚡ Guía de Inicio Rápido
+## [04] Guía de Inicio Rápido
 
 ### 1. Configurar Proveedor de IA
 ```bash
@@ -105,7 +105,7 @@ blood-cipher chat
 
 ---
 
-## 💻 Referencia de Comandos CLI
+## [05] Referencia de Comandos CLI
 
 ```bash
 # === AUDITORÍA DE CREDENCIALES ===
@@ -149,7 +149,7 @@ blood-cipher doctor
 
 ---
 
-## 🛡️ Seguridad, Privacidad y Autorización
+## [06] Seguridad, Privacidad y Autorización
 
 - **Control de Ejecución:** Ningún comando generado por la IA se ejecuta en el sistema sin la confirmación interactiva del operador.
 - **Aislamiento Local:** Las claves API y el historial de sesiones se almacenan exclusivamente de manera local en `~/.config/coder-kali/`.
@@ -157,18 +157,18 @@ blood-cipher doctor
 
 ---
 
-## ⚖️ Aviso Legal (Disclaimer)
+## [07] Aviso Legal (Disclaimer)
 
 Esta herramienta está destinada **exclusivamente para auditorías de seguridad autorizadas, investigación defensiva, actividades de Red Team/Blue Team con consentimiento explícito y administración de sistemas**. El uso de este software contra objetivos sin autorización previa y por escrito es ilegal. Los autores y colaboradores no asumen responsabilidad alguna por el uso indebido de esta herramienta.
 
 ---
 
-## 📄 Licencia
+## [08] Licencia
 
 Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
 
 <div align="center">
-  <sub>Desarrollado para la comunidad hacktivista, investigadores independientes y defensores de la soberanía digital. Creado con ❤️ para la libertad de información y el análisis técnico de infraestructura.</sub>
+  <sub>Desarrollado para la comunidad hacktivista, investigadores independientes y defensores de la soberanía digital. Creado para la libertad de información y el análisis técnico de infraestructura.</sub>
 </div>
