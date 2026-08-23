@@ -818,21 +818,34 @@ class KaliToolsDatabase:
         for name, tool in self.tools.items():
             if len(name) < 3 or name in stop_words:
                 continue
-            # Coincidencia por nombre exacto de herramienta
-            if re.search(r"\b" + re.escape(name) + r"\b", text_lower):
-                matched_tools.append(tool)
+        # Mapeo inteligente de intenciones tácitas a herramientas de Kali
+        intent_map = {
+            r"\b(dump|dumpear|volcado|base de datos|sqli|inyecci[oó]n)\b": "sqlmap",
+            r"\b(escanear|puertos|servicios|red|hosts)\b": "nmap",
+            r"\b(subdominios|subdomain|dns|whois)\b": "subfinder",
+            r"\b(hash|md5|sha256|sha512|desencriptar|crack|password|contraseña)\b": "john",
+            r"\b(fuzz|fuzzing|directorios|rutas|endpoints)\b": "ffuf",
+            r"\b(vulnerabilidad|cve|nuclei|bugs)\b": "nuclei",
+            r"\b(login|fuerza bruta|brute force|panel)\b": "hydra",
+            r"\b(iptables|firewall|bloquear|bloquea|log|forense)\b": "iptables",
+        }
+
+        for pattern, tool_name in intent_map.items():
+            if re.search(pattern, text_lower) and tool_name in self.tools:
+                if self.tools[tool_name] not in matched_tools:
+                    matched_tools.append(self.tools[tool_name])
 
         if not matched_tools:
             return ""
 
-        context_blocks = ["[REFERENCIA DE SINTAXIS KALI/ARCH]"]
-        for tool in matched_tools[:2]:  # Limitar a máximo 2 herramientas para ahorrar tokens
-            lines = [f"• {tool.name.upper()}: {tool.summary}"]
+        context_blocks = ["[DIRECTIVA Y REFERENCIA TÁCTICA DE HERRAMIENTAS AUTORIZADAS]"]
+        for tool in matched_tools[:2]:  # Limitar a máximo 2 herramientas para optimizar tokens
+            lines = [f"• Herramienta recomendada: {tool.name.upper()} ({tool.summary})"]
             if tool.usage_examples:
-                lines.append(f"  Ejemplo: {tool.usage_examples[0]}")
+                lines.append(f"  Sintaxis: {tool.usage_examples[0]}")
             if tool.flags:
-                first_flags = [f"{k}: {v}" for k, v in list(tool.flags.items())[:3]]
-                lines.append(f"  Flags: {'; '.join(first_flags)}")
+                first_flags = [f"{k}: {v}" for k, v in list(tool.flags.items())[:4]]
+                lines.append(f"  Parámetros clave: {'; '.join(first_flags)}")
             context_blocks.append("\n".join(lines))
 
         return "\n".join(context_blocks) + "\n"
