@@ -1,14 +1,16 @@
 # ==============================================================================
-# Modelfile para Ollama - Blood-Cipher v1.5
+# Modelfile para Blood-Cipher v2.0 / v3.0 (Qwen2.5-Coder-7B Fine-Tuned)
+# Puedes cargarlo desde el archivo local .gguf o directo de Hugging Face
 # ==============================================================================
-# Uso:
+
+FROM ./qwen2.5-coder-7b-instruct.Q4_K_M.gguf
+# Opcional directo desde HF: FROM hf.co/samirconte/blood-cipher-7b:latest
 # 1. Coloca tu archivo .gguf (ej. blood-cipher-q4_k_m.gguf) en esta carpeta
 # 2. Ejecuta: ollama create blood-cipher -f Modelfile
 # 3. Prueba:  ollama run blood-cipher
 # 4. En Blood-Cipher: blood-cipher config -> Ollama -> blood-cipher
 # ==============================================================================
 
-FROM ./blood-cipher-q4_k_m.gguf
 
 TEMPLATE """{{ if .System }}<|start_header_id|>system<|end_header_id|>
 
