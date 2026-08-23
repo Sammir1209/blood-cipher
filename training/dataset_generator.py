@@ -1,11 +1,11 @@
 """
-training/dataset_generator.py - Generador Élite de Dataset para Blood-Cipher v4.0 (1000+ Muestras).
+training/dataset_generator.py - Generador Élite de Dataset para Blood-Cipher v5.0 (1500 Muestras Tácticas).
 Compila un dataset masivo estructurado para auditorías de seguridad defensivas y ofensivas autorizadas:
-1. OSINT Profundo, Mapeo Perimetral, BGP/ASN, Cloud Recon & DNS (200 ejemplos)
-2. Auditoría de Redes, Mapeo de Puertos, Detección de Servicios & Evasión de Filtros (200 ejemplos)
-3. Auditoría Web, Identificación de Vulnerabilidades (SQLi, XSS, SSRF, IDOR), APIs & CMS (200 ejemplos)
-4. Auditoría de Autenticación, Análisis Criptográfico, Hashes & Volcados de Credenciales (200 ejemplos)
-5. Hardening, Análisis Forense, Parsing de Logs, Detección de SUIDs & Automatización en Linux (200 ejemplos)
+1. OSINT Profundo, Mapeo Perimetral, BGP/ASN, Cloud Recon & DNS (300 ejemplos - 60 dominios x 5)
+2. Auditoría de Redes, Mapeo de Puertos, Detección de Servicios & Evasión de Filtros (300 ejemplos - 60 hosts x 5)
+3. Auditoría Web, Identificación de Vulnerabilidades (SQLi, XSS, SSRF, IDOR), APIs & CMS (300 ejemplos - 60 objetivos x 5)
+4. Auditoría de Autenticación, Análisis Criptográfico, Hashes & Volcados de Credenciales (300 ejemplos - 60 familias x 5)
+5. Hardening, Análisis Forense, Parsing de Logs, Detección de SUIDs & Automatización en Linux (300 ejemplos - 60 amenazas x 5)
 """
 
 import json
@@ -16,11 +16,11 @@ OUTPUT_FILE = OUTPUT_DIR / "blood_cipher_dataset.jsonl"
 
 SYSTEM_PROMPT = """Eres Blood-Cipher v1.5, un agente de Inteligencia Artificial táctico de élite especializado en hacktivismo técnico, reconocimiento OSINT 360°, auditoría de vulnerabilidades e ingeniería de sistemas Linux. Tu directiva fundamental es la persistencia táctica y la resolución autónoma de objetivos: si una técnica, escaneo, extracción o auditoría encuentra obstáculos, no te detengas ni uses respuestas genéricas; diagnostica el fallo, adapta la estrategia y ejecuta métodos alternativos hasta completar la tarea con éxito total. Utiliza siempre los delimitadores XML <ejecutar_comando>comando_aqui</ejecutar_comando> o <escribir_archivo ruta="/ruta/archivo">contenido</escribir_archivo>."""
 
-def build_1000_samples():
+def build_1500_samples():
     samples = []
 
     # =========================================================================
-    # 1. OSINT PROFUNDO, CLOUD, BGP & ENUMERACIÓN PERIMETRAL (200 EJEMPLOS - 40 DOMINIOS x 5)
+    # 1. OSINT PROFUNDO, CLOUD, BGP & ENUMERACIÓN PERIMETRAL (300 EJEMPLOS - 60 DOMINIOS x 5)
     # =========================================================================
     domains_data = [
         ("target-corp.com", "infraestructura central corporativa"),
@@ -63,6 +63,26 @@ def build_1000_samples():
         ("secure-cloud-id.net", "proveedor de identidad federada SAML/OIDC"),
         ("payments-switch.int", "procesador de transacciones ISO 8583"),
         ("grid-telemetry.pe", "subestaciones eléctricas de alta tensión"),
+        ("fintech-paygate.io", "pasarela de pagos recurrentes"),
+        ("supercomputing-center.es", "nodo central de supercómputo"),
+        ("microgrid-energy.de", "gestor de microredes renovables"),
+        ("drone-fleet-control.net", "servidor telemático de drones"),
+        ("telemed-consulting.org", "plataforma de telemedicina segura"),
+        ("smart-metering.tech", "concentrador de contadores inteligentes"),
+        ("agritech-harvest.com", "sensores de telemetría agrícola"),
+        ("securities-trading.co", "motor de emparejamiento bursátil"),
+        ("customs-cargo-clear.gov", "sistema aduanero de contenedores"),
+        ("pipeline-pressure-net.int", "control de gasoductos troncales"),
+        ("identity-federation.cloud", "gateway centralizado de autenticación"),
+        ("autonomous-vehicles.ai", "broker V2X de vehículos autónomos"),
+        ("space-telescope-data.org", "repositorio astrofísico de imágenes"),
+        ("seismic-alert-network.net", "red de alerta temprana sísmica"),
+        ("cold-chain-logistics.eu", "monitoreo térmico farmacéutico"),
+        ("container-ports.pe", "gestor de terminales portuarias"),
+        ("data-privacy-vault.io", "bóveda de datos anonimizados"),
+        ("open-banking-api.es", "API PSD2 de interoperabilidad bancaria"),
+        ("defense-cyber-range.mil", "entorno de simulación defensiva"),
+        ("quantum-crypto-net.org", "enlace de distribución cuántica QKD"),
     ]
 
     for domain, desc in domains_data:
@@ -123,7 +143,7 @@ host {domain} | awk '/has address/ {{print $4}}' | while read ip; do whois $ip |
         })
 
     # =========================================================================
-    # 2. ESCANEO, MAPEO Y AUDITORÍA DE RED (200 EJEMPLOS - 40 HOSTS x 5)
+    # 2. ESCANEO, MAPEO Y AUDITORÍA DE RED (300 EJEMPLOS - 60 HOSTS x 5)
     # =========================================================================
     network_hosts = [
         ("192.168.1.1", "gateway principal"),
@@ -166,6 +186,26 @@ host {domain} | awk '/has address/ {{print $4}}' | while read ip; do whois $ip |
         ("192.168.60.2", "nodo de telemetría InfluxDB"),
         ("10.2.2.2", "servidor NTP Stratum-1"),
         ("172.30.0.100", "servidor OpenShift API"),
+        ("192.168.110.1", "concentrador IPsec VPN StrongSwan"),
+        ("10.12.0.1", "servidor DNS Bind9 autoritativo"),
+        ("172.25.10.5", "panel de monitorización Graylog"),
+        ("192.168.90.15", "servidor de respaldos Bacula/Veeam"),
+        ("10.80.0.30", "servidor de licencias FlexLM"),
+        ("172.26.0.4", "gestor de contenedores Podman API"),
+        ("192.168.40.50", "controlador de acceso biométrico IP"),
+        ("10.5.5.1", "balanceador de carga HAProxy"),
+        ("172.21.0.9", "servidor de métricas Telegraf"),
+        ("192.168.180.1", "switch gestionado Arista EOS"),
+        ("10.60.0.10", "gateway de telemetría MQTT EMQX"),
+        ("172.27.0.8", "nodo Apache Spark Master"),
+        ("192.168.220.1", "firewall Fortinet FortiGate"),
+        ("10.33.0.15", "servidor Syslog-NG central"),
+        ("172.23.0.7", "nodo de computación Nomad"),
+        ("192.168.130.5", "servidor de repositorios Gitolite"),
+        ("10.70.0.1", "gateway de telefonía VoIP Asterisk"),
+        ("172.29.0.12", "nodo de base de datos ClickHouse"),
+        ("192.168.160.1", "concentrador de acceso WiFi WPA3 Enterprise"),
+        ("10.44.0.2", "servidor de firma digital PKI OpenSSL"),
     ]
 
     for ip, role in network_hosts:
@@ -216,7 +256,7 @@ sudo nmap --script vuln -sV -Pn {ip} -oN nmap_vulns_{ip_tag}.txt
         })
 
     # =========================================================================
-    # 3. AUDITORÍA WEB, VULNERABILIDADES, APIS & CMS (200 EJEMPLOS - 40 OBJETIVOS x 5)
+    # 3. AUDITORÍA WEB, VULNERABILIDADES, APIS & CMS (300 EJEMPLOS - 60 OBJETIVOS x 5)
     # =========================================================================
     web_targets = [
         ("https://shop.target.pe", "tienda online e-commerce"),
@@ -259,6 +299,26 @@ sudo nmap --script vuln -sV -Pn {ip} -oN nmap_vulns_{ip_tag}.txt
         ("https://superset.dashboards-bi.org", "Apache Superset BI"),
         ("https://n8n.automation-flows.io", "nodo de automatización n8n"),
         ("https://zabbix.monitoring-net.pe", "panel de monitoreo Zabbix"),
+        ("https://mattermost.chat-team.org", "servidor de mensajería Mattermost"),
+        ("https://rundeck.job-scheduler.io", "orquestador de tareas Rundeck"),
+        ("https://argocd.gitops-deploy.com", "panel de despliegue ArgoCD"),
+        ("https://graylog.log-management.net", "gestor de registros Graylog"),
+        ("https://snipe-it.assets-it.org", "gestor de inventario IT"),
+        ("https://wiki.js.documentation.com", "base de conocimiento Wiki.js"),
+        ("https://bitwarden.vault-enterprise.es", "servidor Bitwarden auto-alojado"),
+        ("https://jellyfin.media-hub.io", "servidor multimedia Jellyfin"),
+        ("https://owncloud.storage-cloud.net", "nube corporativa ownCloud"),
+        ("https://traccar.gps-tracking.org", "servidor telemático GPS Traccar"),
+        ("https://paperless.document-ocr.com", "gestor documental Paperless"),
+        ("https://minio.s3-buckets.internal", "almacenamiento S3 MinIO"),
+        ("https://rabbitmq.mgmt-console.io", "consola de gestión RabbitMQ"),
+        ("https://pgadmin.postgres-admin.net", "interfaz web pgAdmin4"),
+        ("https://phpmyadmin.db-panel.org", "panel phpMyAdmin clásico"),
+        ("https://rundeck.automation-ops.com", "plataforma de operaciones Rundeck"),
+        ("https://jenkins.build-server.int", "servidor de compilación Jenkins"),
+        ("https://openhab.smart-home.net", "servidor domótico openHAB"),
+        ("https://homeassistant.iot-gate.org", "nodo Home Assistant"),
+        ("https://cockpit.linux-server.local", "panel de control Linux Cockpit"),
     ]
 
     for url, desc in web_targets:
@@ -313,7 +373,7 @@ sqlmap -u "{url}/search?q=test" --batch --random-agent -D target_db --tables
         })
 
     # =========================================================================
-    # 4. AUDITORÍA DE AUTENTICACIÓN, HASHES, SHADOW & CREDENCIALES (200 EJEMPLOS - 40 ESCENARIOS x 5)
+    # 4. AUDITORÍA DE AUTENTICACIÓN, HASHES, SHADOW & CREDENCIALES (300 EJEMPLOS - 60 FAMILIAS x 5)
     # =========================================================================
     hashes_data = [
         ("5f4dcc3b5aa765d61d8327deb882cf99", "MD5", "password"),
@@ -356,6 +416,26 @@ sqlmap -u "{url}/search?q=test" --batch --random-agent -D target_db --tables
         ("32ed87b22c4eb327c4249d0f546cf751", "NTLM", "12345678"),
         ("e80b5017098950fc58aad83c8c14978e", "NTLM", "letmein"),
         ("f75b8179e4bbe7e2b4a074d239b469ec", "NTLM", "welcome"),
+        ("ba3253876aed6bc22d4a6ff53d8406c6ad864195ed144ab5c87621b6c233b548baeae6956df346ec8c17f5ea10f35ee3cbc514797ed7ddd3145464e2a0bab413", "SHA-512", "123456"),
+        ("6cf615d5bcaac778352a8f1f3360d23f02f34ec182e25989780bf2fb91bd935f", "SHA-256", "letmein"),
+        ("e2fc714c4727ee9395f324cd2e7f331f", "MD5", "abcd"),
+        ("25f9e794323b453885f5181f1b624d0b", "MD5", "123456789"),
+        ("827ccb0eea8a706c4c34a16891f84e7b", "MD5", "12345"),
+        ("01b307acba4f54f55aafc33bb06bbbf6ca803e9a", "SHA-1", "password123"),
+        ("9d4e1e23bd5b727046a9e3b4b7db57bd8d6ee684", "SHA-1", "pass"),
+        ("a3e4a8b7c3d1e2f4a5b6c7d8e9f0123456789abc", "SHA-1", "custom"),
+        ("0b4e7a0e5fe84ad35fb5f95b9ceeac79", "MD5", "ubuntu"),
+        ("099ebea48ea9666a7da21774079331f0", "MD5", "debian"),
+        ("5ebe2294ecd0e0f08eab7690d2a6ee69", "MD5", "secret"),
+        ("1f3870be274f6c49b3e31a0c6728957f", "MD5", "dragon"),
+        ("3e2646271c62045ad7d0263f350ef120", "MD5", "shadow"),
+        ("624a1b0266cd224bf16b801b63fb8926", "MD5", "access"),
+        ("c7911af38fca4a961f6305a415951d45", "MD5", "service"),
+        ("4c81a2992d919bb144b62db4730be780", "MD5", "qwertyuiop"),
+        ("2c1598f80cb48cfd26c59c5d013f9f74", "MD5", "server"),
+        ("ecb47f078d4615a013a5323a6f1947b9", "MD5", "database"),
+        ("1b4588e404b901a5a0ccf1ed3f1df64a", "MD5", "cisco"),
+        ("6198f24ecb9c3f59665ecb371a539b03", "NTLM", "kali"),
     ]
 
     for h_val, h_type, _ in hashes_data:
@@ -411,7 +491,7 @@ john --format=NT --wordlist=/usr/share/wordlists/rockyou.txt /tmp/sam_dump.txt
         })
 
     # =========================================================================
-    # 5. HARDENING, LINUX, FIREWALLS, FORENSE & SCRIPTS (200 EJEMPLOS - 40 THREATS x 5)
+    # 5. HARDENING, LINUX, FIREWALLS, FORENSE & SCRIPTS (300 EJEMPLOS - 60 THREATS x 5)
     # =========================================================================
     threat_ips = [
         "185.220.101.5", "45.33.32.156", "198.51.100.24", "203.0.113.88", "194.26.29.11",
@@ -422,6 +502,10 @@ john --format=NT --wordlist=/usr/share/wordlists/rockyou.txt /tmp/sam_dump.txt
         "185.191.171.12", "45.128.232.88", "193.32.162.50", "91.92.241.10", "185.234.218.66",
         "45.141.215.11", "194.180.174.20", "185.156.73.54", "45.148.10.82", "193.106.191.25",
         "91.216.107.12", "185.177.125.40", "45.86.208.99", "194.147.140.15", "185.241.208.7",
+        "194.31.98.10", "45.138.74.55", "185.202.2.14", "91.243.44.80", "194.67.210.9",
+        "185.162.235.12", "45.9.148.200", "193.42.33.15", "91.200.12.5", "185.180.143.90",
+        "45.153.160.10", "194.226.57.18", "185.216.140.4", "91.219.236.19", "194.58.112.30",
+        "185.143.223.8", "45.145.66.12", "193.169.255.44", "91.215.85.10", "185.176.27.15",
     ]
 
     for ip_b in threat_ips:
@@ -489,9 +573,9 @@ sudo ss -tulpn | grep LISTEN
 
 
 def generate_dataset():
-    """Compila el dataset JSONL masivo con 1000 ejemplos tácticos."""
+    """Compila el dataset JSONL masivo con 1500 ejemplos tácticos."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    samples = build_1000_samples()
+    samples = build_1500_samples()
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         for sample in samples:
@@ -504,7 +588,7 @@ def generate_dataset():
             }
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print(f"[OK] Dataset Masivo (1000 Muestras) generado con exito en: {OUTPUT_FILE}")
+    print(f"[OK] Dataset Masivo Definitivo (1500 Muestras) generado con exito en: {OUTPUT_FILE}")
     print(f"[OK] Total de ejemplos estructurados: {len(samples)}")
 
 
