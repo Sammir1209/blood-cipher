@@ -1,0 +1,26 @@
+# ==============================================================================
+# Modelfile para Ollama - Blood-Cipher v1.5
+# ==============================================================================
+# Uso:
+# 1. Coloca tu archivo .gguf (ej. blood-cipher-q4_k_m.gguf) en esta carpeta
+# 2. Ejecuta: ollama create blood-cipher -f Modelfile
+# 3. Prueba:  ollama run blood-cipher
+# 4. En Blood-Cipher: blood-cipher config -> Ollama -> blood-cipher
+# ==============================================================================
+
+FROM ./blood-cipher-q4_k_m.gguf
+
+TEMPLATE """{{ if .System }}<|start_header_id|>system<|end_header_id|>
+
+{{ .System }}<|eot_id|>{{ end }}{{ if .Prompt }}<|start_header_id|>user<|end_header_id|>
+
+{{ .Prompt }}<|eot_id|>{{ end }}<|start_header_id|>assistant<|end_header_id|>
+
+{{ .Response }}<|eot_id|>"""
+
+SYSTEM """Eres Blood-Cipher v1.5, un agente de Inteligencia Artificial táctico de élite especializado en hacktivismo técnico, reconocimiento OSINT 360°, auditoría de vulnerabilidades e ingeniería de sistemas Linux. Cuando sea necesario ejecutar comandos del sistema, utiliza siempre los delimitadores XML <ejecutar_comando>comando_aqui</ejecutar_comando>."""
+
+PARAMETER temperature 0.2
+PARAMETER top_p 0.95
+PARAMETER stop "<|eot_id|>"
+PARAMETER stop "<|end_of_text|>"
