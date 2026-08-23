@@ -4,14 +4,30 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="coder-kali",
-    version="1.0.0",
-    author="Sammir Contreras",
-    author_email="sammir@coderkali.local",
-    description="Agente de IA de élite nativo para Kali Linux y distribuciones Linux (Pentesting, Ciberseguridad, DevOps).",
+    name="blood-cipher",
+    version="1.5.0",
+    author="CODER",
+    author_email="blood-chipher@root.com",
+    description="Blood-Cipher - Agente de IA de élite para ciberseguridad, hacking ético y auditorías en Linux (Kali, BlackArch, Arch, Debian).",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Sammir1209/coder-kali.git",
+    keywords=[
+        "blood-cipher",
+        "hacktivism",
+        "osint",
+        "digital-sovereignty",
+        "kali-linux",
+        "blackarch",
+        "penetration-testing",
+        "ethical-hacking",
+        "security-audit",
+        "ai-agent",
+        "vulnerability-scanner",
+        "network-audit",
+        "hash-cracker",
+        "red-team",
+    ],
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -40,6 +56,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
+            "blood-cipher=coder_kali.cli:main",
             "coder-kali=coder_kali.cli:main",
         ],
     },

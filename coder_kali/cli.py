@@ -29,9 +29,17 @@ from coder_kali.ui.chat_render import (
 )
 from coder_kali.ui.config_menus import interactive_config_wizard, test_provider_connection
 
+# Asegurar codificación UTF-8 en terminales Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 app = typer.Typer(
     name="coder-kali",
-    help="⚡ Agente de IA de Élite para Ciberseguridad, Hacking Ético y Administración de Sistemas Linux.",
+    help="Agente de IA de Elite para Ciberseguridad, Hacking Etico y Auditorias.",
     add_completion=False,
 )
 console = Console()
@@ -262,6 +270,15 @@ def chat(
                 model = config_mgr.get_active_model()
                 agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=agent.current_session.id)
                 continue
+            elif cleaned_cmd in ["creds", "credenciales", "hashes"]:
+                _interactive_creds_menu()
+                continue
+            elif cleaned_cmd in ["vulns", "vulnerabilidades", "scan"]:
+                console.print("[bold cyan][*] Usa 'coder-kali audit vulns <target>' desde la terminal o escribe tu solicitud de auditoría aquí.[/bold cyan]")
+                continue
+            elif cleaned_cmd in ["network", "red", "net"]:
+                console.print("[bold cyan][*] Usa 'coder-kali audit network <target>' desde la terminal o escribe tu solicitud de red aquí.[/bold cyan]")
+                continue
             elif cleaned_cmd in ["ayuda", "help"]:
                 console.print("""
 [bold cyan]Comandos de la sesión:[/bold cyan]
@@ -271,6 +288,9 @@ def chat(
   [green]new / nuevo[/green]     - Iniciar un nuevo chat limpio
   [green]clear[/green]           - Limpiar la pantalla de la terminal
   [green]config[/green]          - Cambiar de modelo o API Key
+  [bold green]creds[/bold green]           - 🔑 Abrir auditoría de credenciales y hashes
+  [bold green]vulns[/bold green]           - 🛡️ Escaneo de vulnerabilidades
+  [bold green]network[/bold green]         - 🌐 Pruebas y auditoría de red
   [green]ayuda[/green]           - Mostrar este mensaje de ayuda
                 """)
                 continue
@@ -589,11 +609,12 @@ def sync_tools(
         db.scrape_blackarch_org(limit=limit, verbose=True)
 
 
-@app.command(name="update", help="🔄 Actualiza Coder-Kali a la última versión disponible desde GitHub.")
+@app.command(name="update", help="Actualiza Coder-Kali a la ultima version disponible desde GitHub.")
 def update():
     """Descarga e instala la versión más reciente de Coder-Kali desde el repositorio oficial."""
     import subprocess
     from pathlib import Path
+    from rich.panel import Panel
 
     console.print()
     console.print(Panel("[bold cyan]Buscando actualizaciones de Coder-Kali en GitHub...[/bold cyan]", border_style="cyan"))
@@ -655,9 +676,357 @@ def reset():
         console.print("[bold green][✓] Configuración restablecida exitosamente.[/bold green]")
 
 
+# ==============================================================================
+# SUBCOMANDOS DE AUDITORÍA AVANZADA (Credenciales, Vulnerabilidades, Red)
+# ==============================================================================
+
+audit_app = typer.Typer(
+    name="audit",
+    help="Modulos de auditoria: Credenciales, Vulnerabilidades y Red.",
+)
+app.add_typer(audit_app, name="audit")
+
+
+@audit_app.command(name="creds", help="Auditoria y cracking de credenciales, hashes y contrasenas.")
+def audit_creds(
+    hash_value: Optional[str] = typer.Option(None, "--hash", "-H", help="Hash individual a crackear."),
+    file: Optional[str] = typer.Option(None, "--file", "-f", help="Archivo de hashes o credenciales a procesar."),
+    shadow: Optional[str] = typer.Option(None, "--shadow", help="Ruta al archivo /etc/shadow."),
+    wordlist: str = typer.Option("/usr/share/wordlists/rockyou.txt", "--wordlist", "-w", help="Ruta al diccionario de contraseñas."),
+    hash_type: Optional[str] = typer.Option(None, "--type", "-t", help="Tipo de hash (MD5, SHA1, SHA256, SHA512, NTLM, bcrypt)."),
+    method: str = typer.Option("auto", "--method", "-m", help="Método: auto, native, john, hashcat."),
+    analyze: Optional[str] = typer.Option(None, "--analyze", "-a", help="Analizar fortaleza de una contraseña."),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Guardar resultados en archivo (JSON o CSV)."),
+):
+    """Auditoría completa de credenciales y contraseñas."""
+    from rich.panel import Panel
+    from rich.table import Table
+    from coder_kali.audit_modules import CredentialAuditor
+
+    auditor = CredentialAuditor()
+
+    # Modo: Analizar fortaleza de contraseña
+    if analyze:
+        result = auditor.analyze_password(analyze)
+        grade_colors = {"A+": "bold green", "A": "green", "B": "cyan", "C": "yellow", "D": "red", "F": "bold red"}
+        color = grade_colors.get(result.grade, "white")
+
+        console.print()
+        console.print(Panel(
+            f"[bold white]Contraseña:[/bold white] {result.password}\n"
+            f"[bold white]Longitud:[/bold white] {result.length}\n"
+            f"[bold white]Entropía:[/bold white] {result.entropy} bits\n"
+            f"[bold white]Puntuación:[/bold white] [{color}]{result.score}/100 ({result.grade})[/{color}]\n"
+            f"[bold white]Mayúsculas:[/bold white] {'✅' if result.has_upper else '❌'} | "
+            f"Minúsculas: {'✅' if result.has_lower else '❌'} | "
+            f"Números: {'✅' if result.has_digits else '❌'} | "
+            f"Especiales: {'✅' if result.has_special else '❌'}\n"
+            f"[bold white]Común:[/bold white] {'⚠️ SÍ — aparece en diccionarios' if result.is_common else '✅ No'}\n\n"
+            + "\n".join(result.feedback),
+            title="[bold cyan]🔑 Análisis de Fortaleza de Contraseña[/bold cyan]",
+            border_style="cyan",
+        ))
+        return
+
+    # Modo: Parsear archivo de credenciales
+    if file or shadow:
+        target_file = shadow or file
+        console.print(f"[bold cyan][*] Parseando archivo de credenciales: {target_file}[/bold cyan]")
+        entries = auditor.parse_credentials_file(target_file)
+
+        if entries and "error" in entries[0]:
+            console.print(f"[bold red][!] {entries[0]['error']}[/bold red]")
+            return
+
+        table = Table(title=f"📋 Credenciales Parseadas de {Path(target_file).name}", border_style="cyan")
+        table.add_column("#", style="dim", width=4)
+        table.add_column("Usuario", style="bold green")
+        table.add_column("Hash / Contraseña", style="white", max_width=50)
+        table.add_column("Formato", style="cyan")
+        table.add_column("Tipo Hash", style="yellow")
+
+        for entry in entries:
+            table.add_row(
+                str(entry.get("line_number", "")),
+                entry.get("username", "-"),
+                (entry.get("hash", "") or entry.get("password", "") or entry.get("value", ""))[:50],
+                entry.get("format", "unknown"),
+                entry.get("hash_type", "-"),
+            )
+
+        console.print(table)
+
+        # Ofrecer crackear los hashes encontrados
+        hash_entries = [e for e in entries if e.get("hash")]
+        if hash_entries:
+            console.print(f"\n[bold green][*] {len(hash_entries)} hashes encontrados. Iniciando cracking automático...[/bold green]")
+            results_table = Table(title="🔓 Resultados de Cracking", border_style="green")
+            results_table.add_column("Hash", style="dim", max_width=35)
+            results_table.add_column("Tipo", style="cyan")
+            results_table.add_column("Contraseña", style="bold green")
+            results_table.add_column("Tiempo", style="yellow")
+            results_table.add_column("Estado", style="white")
+
+            all_results = []
+            for entry in hash_entries:
+                h = entry["hash"]
+                ht = entry.get("hash_type")
+                console.print(f"[dim]  Crackeando: {h[:40]}... ({ht})[/dim]")
+                result = auditor.crack_hash_native(h, wordlist_path=wordlist, hash_type=ht)
+                all_results.append(result)
+
+                status_str = "[bold green]✅ CRACKEADO[/bold green]" if result.status == "cracked" else "[dim red]❌ No encontrado[/dim red]"
+                results_table.add_row(
+                    h[:35],
+                    result.hash_type,
+                    result.cracked_password or "-",
+                    f"{result.time_seconds}s",
+                    status_str,
+                )
+
+            console.print(results_table)
+
+            cracked = [r for r in all_results if r.status == "cracked"]
+            console.print(f"\n[bold green][✓] {len(cracked)}/{len(all_results)} hashes crackeados exitosamente.[/bold green]")
+
+            if output and all_results:
+                fmt = "csv" if output.endswith(".csv") else "json"
+                saved = auditor.export_results(all_results, output, fmt)
+                console.print(f"[bold cyan][✓] Resultados exportados a: {saved}[/bold cyan]")
+
+        return
+
+    # Modo: Crackear hash individual
+    if hash_value:
+        identified = auditor.identify_hash(hash_value)
+        console.print(f"\n[bold cyan][*] Hash detectado: {identified[0]['type']} (confianza: {identified[0]['confidence']})[/bold cyan]")
+
+        if method == "auto" or method == "native":
+            console.print(f"[bold green][*] Iniciando cracking nativo con diccionario: {wordlist}[/bold green]")
+            with console.status("[bold cyan]Crackeando hash con Python nativo...[/bold cyan]", spinner="dots"):
+                result = auditor.crack_hash_native(hash_value, wordlist_path=wordlist, hash_type=hash_type)
+        elif method == "john":
+            console.print("[bold green][*] Usando John the Ripper...[/bold green]")
+            result = auditor.crack_with_john(hash_value, wordlist_path=wordlist, hash_format=hash_type)
+        elif method == "hashcat":
+            console.print("[bold green][*] Usando Hashcat...[/bold green]")
+            result = auditor.crack_with_hashcat(hash_value, wordlist_path=wordlist)
+        else:
+            console.print(f"[red][!] Método desconocido: {method}[/red]")
+            return
+
+        if result.status == "cracked":
+            console.print(Panel(
+                f"[bold white]Hash:[/bold white] {result.original_hash}\n"
+                f"[bold white]Tipo:[/bold white] {result.hash_type}\n"
+                f"[bold green]Contraseña:[/bold green] [bold bright_green]{result.cracked_password}[/bold bright_green]\n"
+                f"[bold white]Tiempo:[/bold white] {result.time_seconds}s\n"
+                f"[bold white]Método:[/bold white] {result.method}",
+                title="[bold green]🔓 ¡HASH CRACKEADO EXITOSAMENTE![/bold green]",
+                border_style="green",
+            ))
+        else:
+            console.print(Panel(
+                f"[bold white]Hash:[/bold white] {result.original_hash}\n"
+                f"[bold white]Tipo:[/bold white] {result.hash_type}\n"
+                f"[bold white]Estado:[/bold white] [bold red]{result.status}[/bold red]\n"
+                f"[bold white]Tiempo:[/bold white] {result.time_seconds}s\n"
+                f"[bold white]Método:[/bold white] {result.method}",
+                title="[bold red]🔒 Hash no crackeado[/bold red]",
+                border_style="red",
+            ))
+
+        if output:
+            fmt = "csv" if output.endswith(".csv") else "json"
+            saved = auditor.export_results([result], output, fmt)
+            console.print(f"[bold cyan][✓] Resultados exportados a: {saved}[/bold cyan]")
+        return
+
+    # Modo interactivo si no se pasan flags
+    _interactive_creds_menu()
+
+
+def _interactive_creds_menu():
+    """Menú interactivo de auditoría de credenciales."""
+    import questionary
+    from rich.panel import Panel
+    from coder_kali.audit_modules import CredentialAuditor
+
+    auditor = CredentialAuditor()
+
+    while True:
+        console.print("\n[bold cyan]🔑 Auditoría de Credenciales — Menú Interactivo[/bold cyan]")
+
+        action = questionary.select(
+            "¿Qué operación deseas realizar?",
+            choices=[
+                questionary.Choice("🔓 Crackear un hash", value="CRACK"),
+                questionary.Choice("📄 Parsear archivo de credenciales", value="PARSE"),
+                questionary.Choice("🔍 Identificar tipo de hash", value="IDENTIFY"),
+                questionary.Choice("📊 Analizar fortaleza de contraseña", value="ANALYZE"),
+                questionary.Choice("🔙 Volver", value="BACK"),
+            ],
+        ).ask()
+
+        if not action or action == "BACK":
+            break
+
+        if action == "CRACK":
+            hash_input = questionary.text("Ingresa el hash a crackear:").ask()
+            if hash_input:
+                identified = auditor.identify_hash(hash_input.strip())
+                console.print(f"[cyan]Tipo detectado: {identified[0]['type']}[/cyan]")
+                with console.status("[bold cyan]Crackeando...[/bold cyan]", spinner="dots"):
+                    result = auditor.crack_hash_native(hash_input.strip())
+                if result.status == "cracked":
+                    console.print(f"[bold green]✅ Contraseña encontrada: {result.cracked_password} ({result.time_seconds}s)[/bold green]")
+                else:
+                    console.print(f"[bold red]❌ No se encontró la contraseña ({result.time_seconds}s)[/bold red]")
+
+        elif action == "PARSE":
+            file_path = questionary.text("Ruta al archivo de credenciales:").ask()
+            if file_path:
+                entries = auditor.parse_credentials_file(file_path.strip())
+                for e in entries[:20]:
+                    console.print(f"  [{e.get('format', '?')}] {e.get('username', '-')} : {(e.get('hash', '') or e.get('password', ''))[:50]} ({e.get('hash_type', '-')})")
+
+        elif action == "IDENTIFY":
+            hash_input = questionary.text("Ingresa el hash a identificar:").ask()
+            if hash_input:
+                results = auditor.identify_hash(hash_input.strip())
+                for r in results:
+                    console.print(f"  [{r['confidence'].upper()}] {r['type']} — John: {r['john_format']} | Hashcat: -m {r['hashcat_mode']}")
+
+        elif action == "ANALYZE":
+            pw = questionary.text("Ingresa la contraseña a analizar:").ask()
+            if pw:
+                result = auditor.analyze_password(pw)
+                console.print(f"  Puntuación: {result.score}/100 ({result.grade}) | Entropía: {result.entropy} bits")
+                for fb in result.feedback:
+                    console.print(f"  {fb}")
+
+
+@audit_app.command(name="vulns", help="Escaneo de vulnerabilidades, SSL/TLS, cabeceras y CMS.")
+def audit_vulns(
+    target: str = typer.Argument(..., help="Dominio o IP objetivo a auditar."),
+    severity: str = typer.Option("critical,high,medium", "--severity", "-s", help="Severidades a filtrar (critical,high,medium,low,info)."),
+    scanner: str = typer.Option("all", "--scanner", help="Scanner específico: nuclei, nikto, ssl, headers, cms, all."),
+    full: bool = typer.Option(False, "--full", help="Ejecutar auditoría completa con todos los scanners."),
+):
+    """Escaneo de vulnerabilidades con múltiples herramientas."""
+    from rich.panel import Panel
+    from rich.table import Table
+    from coder_kali.audit_modules import VulnerabilityScanner
+
+    vuln_scanner = VulnerabilityScanner()
+
+    console.print(f"\n[bold cyan]🛡️ Iniciando auditoría de vulnerabilidades: {target}[/bold cyan]")
+
+    results = []
+
+    if full or scanner == "all":
+        with console.status("[bold cyan]Ejecutando auditoría completa...[/bold cyan]", spinner="dots"):
+            results = vuln_scanner.quick_vuln_scan(target)
+    elif scanner == "nuclei":
+        with console.status("[bold cyan]Escaneando con Nuclei...[/bold cyan]", spinner="dots"):
+            results.append(vuln_scanner.nuclei_scan(target, severity=severity))
+    elif scanner == "nikto":
+        with console.status("[bold cyan]Escaneando con Nikto...[/bold cyan]", spinner="dots"):
+            results.append(vuln_scanner.nikto_scan(target))
+    elif scanner == "ssl":
+        with console.status("[bold cyan]Auditando SSL/TLS...[/bold cyan]", spinner="dots"):
+            results.append(vuln_scanner.ssl_audit(target))
+    elif scanner == "headers":
+        with console.status("[bold cyan]Analizando cabeceras HTTP...[/bold cyan]", spinner="dots"):
+            results.append(vuln_scanner.header_analysis(target))
+    elif scanner == "cms":
+        with console.status("[bold cyan]Detectando CMS...[/bold cyan]", spinner="dots"):
+            results.append(vuln_scanner.cms_detection(target))
+
+    sev_colors = {"critical": "bold red", "high": "red", "medium": "yellow", "low": "cyan", "info": "dim", "error": "dim red"}
+
+    for r in results:
+        color = sev_colors.get(r.severity, "white")
+        console.print(Panel(
+            f"[bold white]Scanner:[/bold white] {r.scanner.upper()}\n"
+            f"[bold white]Severidad:[/bold white] [{color}]{r.severity.upper()}[/{color}]\n"
+            f"[bold white]Título:[/bold white] {r.title}\n"
+            + (f"[bold white]Descripción:[/bold white] {r.description}\n" if r.description else "")
+            + f"\n[dim]--- Salida ---[/dim]\n{r.raw_output[:2000]}",
+            title=f"[{color}]{'⚠️' if r.severity in ['critical', 'high'] else '🔍'} {r.title}[/{color}]",
+            border_style=color.replace("bold ", ""),
+        ))
+
+    console.print(f"\n[bold green][✓] Auditoría completada. {len(results)} scanners ejecutados sobre {target}.[/bold green]")
+
+
+@audit_app.command(name="network", help="Pruebas de red: escaneo de puertos, hosts, DNS, OS detection.")
+def audit_network(
+    target: str = typer.Argument(..., help="IP, rango CIDR o dominio objetivo."),
+    scan_type: str = typer.Option("ports", "--type", "-t", help="Tipo: ports, discovery, services, os, dns, traceroute, arp."),
+    ports: str = typer.Option("top1000", "--ports", "-p", help="Puertos: top100, top1000, full, o rango (ej. 1-1000)."),
+    timing: str = typer.Option("T4", "--timing", help="Timing template de Nmap: T0 a T5."),
+    nmap_type: str = typer.Option("syn", "--nmap-type", help="Tipo de scan Nmap: syn, connect, udp, fin, xmas."),
+    interface: str = typer.Option("eth0", "--iface", "-i", help="Interfaz de red para ARP scan."),
+):
+    """Pruebas y auditoría de red con múltiples técnicas."""
+    from rich.panel import Panel
+    from coder_kali.audit_modules import NetworkAuditor
+
+    net_auditor = NetworkAuditor()
+
+    console.print(f"\n[bold cyan]🌐 Auditoría de red: {target} (tipo: {scan_type})[/bold cyan]")
+
+    result = None
+
+    if scan_type == "ports":
+        with console.status(f"[bold cyan]Escaneando puertos ({ports}) en {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.advanced_port_scan(
+                target, ports=ports, scan_type=nmap_type,
+                timing=timing, service_detect=True,
+            )
+    elif scan_type == "discovery":
+        with console.status(f"[bold cyan]Descubriendo hosts en {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.host_discovery(target)
+    elif scan_type == "services":
+        with console.status(f"[bold cyan]Enumerando servicios en {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.service_enumeration(target)
+    elif scan_type == "os":
+        with console.status(f"[bold cyan]Detectando sistema operativo de {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.os_detection(target)
+    elif scan_type == "dns":
+        with console.status(f"[bold cyan]Enumerando DNS de {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.dns_enumeration(target)
+    elif scan_type == "traceroute":
+        with console.status(f"[bold cyan]Ejecutando traceroute a {target}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.traceroute_analysis(target)
+    elif scan_type == "arp":
+        with console.status(f"[bold cyan]Ejecutando ARP scan en {interface}...[/bold cyan]", spinner="dots"):
+            result = net_auditor.arp_scan(interface=interface)
+    else:
+        console.print(f"[red][!] Tipo de scan desconocido: {scan_type}[/red]")
+        return
+
+    if result:
+        console.print(Panel(
+            f"[bold white]Objetivo:[/bold white] {result.target}\n"
+            f"[bold white]Tipo:[/bold white] {result.scan_type}\n\n"
+            f"{result.raw_output[:3000]}",
+            title=f"[bold cyan]🌐 Resultado: {result.scan_type.upper()}[/bold cyan]",
+            border_style="cyan",
+        ))
+
+        if result.parsed_data:
+            if "open_ports" in result.parsed_data and result.parsed_data["open_ports"]:
+                console.print(f"\n[bold green][✓] Puertos abiertos encontrados: {', '.join(result.parsed_data['open_ports'])}[/bold green]")
+            if "hosts" in result.parsed_data:
+                console.print(f"[bold green][✓] Hosts activos: {result.parsed_data.get('total', len(result.parsed_data['hosts']))}[/bold green]")
+
+
 def main():
     app()
 
 
 if __name__ == "__main__":
     main()
+

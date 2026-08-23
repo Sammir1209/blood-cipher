@@ -31,7 +31,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CODER-KALI // Autonomous Cyber Operations</title>
+    <title>BLOOD-CIPHER // Autonomous Cyber Operations v1.5</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -246,7 +246,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         .nav-tabs-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-tab {
@@ -1023,8 +1023,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 </svg>
             </div>
             <div class="brand-text">
-                <h1>CODER-KALI</h1>
-                <p>AUTONOMOUS OPERATIONS</p>
+                <h1>BLOOD-CIPHER</h1>
+                <p>AUTONOMOUS OPERATIONS v1.5</p>
             </div>
         </div>
 
@@ -1056,10 +1056,12 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         </div>
 
         <div class="nav-tabs-grid">
-            <button class="btn-tab active" id="tabBtnChat" onclick="switchView('chat')"><i class="fa-solid fa-comments"></i> Chat Táctico</button>
-            <button class="btn-tab" id="tabBtnRecon" onclick="switchView('recon')"><i class="fa-solid fa-radar"></i> Scanner Visual</button>
-            <button class="btn-tab" onclick="openConfigModal()"><i class="fa-solid fa-gear"></i> Ajustes</button>
-            <button class="btn-tab" onclick="openScopeModal()"><i class="fa-solid fa-crosshairs"></i> Scope SOW</button>
+            <button class="btn-tab active" id="tabBtnChat" onclick="switchView('chat')"><i class="fa-solid fa-comments"></i> Chat</button>
+            <button class="btn-tab" id="tabBtnRecon" onclick="switchView('recon')"><i class="fa-solid fa-satellite-dish"></i> Scanner</button>
+            <button class="btn-tab" id="tabBtnCreds" onclick="switchView('creds')"><i class="fa-solid fa-key"></i> Creds</button>
+            <button class="btn-tab" id="tabBtnVulns" onclick="switchView('vulns')"><i class="fa-solid fa-shield-virus"></i> Vulns</button>
+            <button class="btn-tab" id="tabBtnNet" onclick="switchView('net')"><i class="fa-solid fa-network-wired"></i> Net</button>
+            <button class="btn-tab" onclick="openConfigModal()"><i class="fa-solid fa-gear"></i> Config</button>
         </div>
 
         <div class="section-header">
@@ -1092,19 +1094,25 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         <!-- Quick Access Pentest Tools -->
         <div class="quick-tools-bar">
             <div class="tool-chip" onclick="quickPrompt('Realiza un reconocimiento pasivo y escaneo de puertos nmap rápido a ')">
-                <i class="fa-solid fa-network-wired"></i> Nmap Port Scan
+                <i class="fa-solid fa-network-wired"></i> Nmap Scan
             </div>
             <div class="tool-chip" onclick="quickPrompt('Inspecciona cabeceras HTTP, WAF y tecnologías con curl y whatweb en ')">
-                <i class="fa-solid fa-globe"></i> WhatWeb Tech Detect
+                <i class="fa-solid fa-globe"></i> WhatWeb
             </div>
             <div class="tool-chip" onclick="quickPrompt('Descubre subdominios activos usando assetfinder y subfinder para ')">
-                <i class="fa-solid fa-sitemap"></i> Subdomain Discovery
+                <i class="fa-solid fa-sitemap"></i> Subdomains
             </div>
-            <div class="tool-chip" onclick="quickPrompt('Realiza una auditoría de directorios con gobuster / ffuf en ')">
-                <i class="fa-solid fa-folder-tree"></i> Directory Fuzzing
+            <div class="tool-chip" onclick="quickPrompt('Ejecuta un escaneo de vulnerabilidades con nuclei contra ')">
+                <i class="fa-solid fa-radiation"></i> Nuclei
             </div>
-            <div class="tool-chip" onclick="quickPrompt('Ejecuta un escaneo de vulnerabilidades y malas configuraciones con nuclei contra ')">
-                <i class="fa-solid fa-radiation"></i> Nuclei Scan
+            <div class="tool-chip" onclick="switchView('creds')">
+                <i class="fa-solid fa-key" style="color: var(--accent-green);"></i> Hash Cracker
+            </div>
+            <div class="tool-chip" onclick="switchView('vulns')">
+                <i class="fa-solid fa-shield-virus" style="color: var(--accent-cyan);"></i> Vuln Scanner
+            </div>
+            <div class="tool-chip" onclick="switchView('net')">
+                <i class="fa-solid fa-ethernet" style="color: var(--accent-green);"></i> Net Audit
             </div>
         </div>
 
@@ -1112,10 +1120,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         <div class="view-content" id="chatView">
             <div class="chat-stream" id="chatStream">
                 <div class="chat-msg assistant">
-                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI // NÚCLEO AUTÓNOMO</div>
+                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> BLOOD-CIPHER // NÚCLEO AUTÓNOMO</div>
                     <div class="msg-body">
-                        ¡Bienvenido a <strong>Coder-Kali</strong>!<br><br>
-                        Sistema de auditoría de seguridad y reconocimiento de infraestructura.<br>
+                        ¡Bienvenido a <strong>Blood-Cipher v1.5</strong>!<br><br>
+                        Plataforma autónoma de auditoría de seguridad y reconocimiento de infraestructura.<br>
                         Escribe tu objetivo abajo o activa el <strong>Modo Plan</strong> en el panel lateral.
                     </div>
                 </div>
@@ -1156,6 +1164,120 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
                 <div class="recon-card">
                     <h4><i class="fa-solid fa-sitemap"></i> Subdominios Activos</h4>
                     <div class="card-body" id="rcSubs">Esperando escaneo...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credentials Audit View -->
+        <div class="recon-view" id="credsView">
+            <div class="recon-header" style="flex-wrap: wrap; gap: 10px;">
+                <i class="fa-solid fa-key" style="color: var(--accent-green); font-size: 1.2rem;"></i>
+                <textarea id="credsHashInput" placeholder="Pega uno o más hashes (uno por línea)...
+Ej: 5f4dcc3b5aa765d61d8327deb882cf99
+admin:$1$salt$hashvalue
+user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-height: 80px; resize: vertical; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 12px; border-radius: 8px; font-family: var(--font-code); font-size: 0.85rem;"></textarea>
+                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 200px;">
+                    <select id="credsHashType" style="background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem;">
+                        <option value="auto">Auto-Detectar Tipo</option>
+                        <option value="MD5">MD5</option>
+                        <option value="SHA1">SHA1</option>
+                        <option value="SHA256">SHA256</option>
+                        <option value="SHA512">SHA512</option>
+                        <option value="NTLM">NTLM</option>
+                    </select>
+                    <select id="credsMethod" style="background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem;">
+                        <option value="native">Python Nativo (Built-in)</option>
+                        <option value="john">John the Ripper</option>
+                        <option value="hashcat">Hashcat (GPU)</option>
+                    </select>
+                </div>
+                <button class="btn-submit" id="btnCrackHash" onclick="runCredAudit()"><i class="fa-solid fa-unlock-keyhole"></i> CRACKEAR</button>
+            </div>
+            <div style="padding: 8px 0;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Análisis rápido:</span>
+                    <input type="text" id="credsPwAnalyze" placeholder="Escribe una contraseña para analizar su fortaleza..." style="flex: 1; background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-family: var(--font-code); font-size: 0.85rem; min-width: 200px;" onkeypress="if(event.key==='Enter') analyzePassword()">
+                    <button class="btn-tab" onclick="analyzePassword()" style="white-space: nowrap;"><i class="fa-solid fa-chart-bar"></i> Analizar</button>
+                </div>
+            </div>
+            <div id="credsStrengthResult" style="display: none; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px;"></div>
+            <div class="recon-grid" id="credsResultsGrid">
+                <div class="recon-card" style="grid-column: 1 / -1;">
+                    <h4><i class="fa-solid fa-table-list"></i> Resultados de Cracking</h4>
+                    <div class="card-body" id="credsResults" style="min-height: 120px; max-height: 400px;">Esperando hashes para crackear...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vulnerability Scanner View -->
+        <div class="recon-view" id="vulnsView">
+            <div class="recon-header">
+                <i class="fa-solid fa-shield-virus" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
+                <input type="text" id="vulnsTargetInput" placeholder="Dominio o IP objetivo (ej. example.com)...">
+                <select id="vulnsScanType" style="background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; font-size: 0.85rem; min-width: 180px;">
+                    <option value="all">Auditítoria Completa</option>
+                    <option value="headers">Cabeceras HTTP</option>
+                    <option value="ssl">SSL/TLS Audit</option>
+                    <option value="cms">CMS Detection</option>
+                    <option value="nuclei">Nuclei Scan</option>
+                    <option value="nikto">Nikto Scan</option>
+                </select>
+                <button class="btn-submit" id="btnRunVulns" onclick="runVulnScan()"><i class="fa-solid fa-shield-halved"></i> LANZAR AUDITORÍA</button>
+            </div>
+            <div class="recon-grid" id="vulnsResultsGrid">
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-shield-virus" style="color: var(--accent-cyan);"></i> Cabeceras de Seguridad</h4>
+                    <div class="card-body" id="vulnsHeaders">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-lock" style="color: var(--accent-green);"></i> SSL/TLS Audit</h4>
+                    <div class="card-body" id="vulnsSsl">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-code" style="color: #ffffff;"></i> CMS & Tecnologías</h4>
+                    <div class="card-body" id="vulnsCms">Esperando escaneo...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-radiation" style="color: var(--accent-red);"></i> Nuclei / Nikto Findings</h4>
+                    <div class="card-body" id="vulnsFindings" style="max-height: 250px;">Esperando escaneo...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Audit View -->
+        <div class="recon-view" id="netView">
+            <div class="recon-header" style="flex-wrap: wrap; gap: 10px;">
+                <i class="fa-solid fa-ethernet" style="color: var(--accent-green); font-size: 1.2rem;"></i>
+                <input type="text" id="netTargetInput" placeholder="IP, rango CIDR o dominio (ej. 192.168.1.0/24 o example.com)..." style="flex: 1; min-width: 250px;">
+                <select id="netScanType" style="background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; font-size: 0.85rem; min-width: 180px;">
+                    <option value="ports">Port Scan Avanzado</option>
+                    <option value="discovery">Host Discovery</option>
+                    <option value="services">Service Enumeration</option>
+                    <option value="os">OS Detection</option>
+                    <option value="dns">DNS Enumeration</option>
+                    <option value="traceroute">Traceroute</option>
+                </select>
+                <select id="netPorts" style="background: var(--bg-card); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; font-size: 0.85rem; min-width: 140px;">
+                    <option value="top1000">Top 1000 Ports</option>
+                    <option value="top100">Top 100 Ports</option>
+                    <option value="full">All 65535 Ports</option>
+                    <option value="1-1000">1-1000</option>
+                    <option value="80,443,8080,8443">Web Ports</option>
+                </select>
+                <button class="btn-submit" id="btnRunNet" onclick="runNetAudit()"><i class="fa-solid fa-tower-broadcast"></i> EJECUTAR ANÁLISIS</button>
+            </div>
+            <div class="recon-grid" id="netResultsGrid">
+                <div class="recon-card" style="grid-column: 1 / -1;">
+                    <h4><i class="fa-solid fa-terminal"></i> Resultado del Análisis de Red</h4>
+                    <div class="card-body" id="netResults" style="min-height: 120px; max-height: 500px;">Esperando análisis...</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-server"></i> Puertos / Hosts Detectados</h4>
+                    <div class="card-body" id="netParsed" style="min-height: 80px;">-</div>
+                </div>
+                <div class="recon-card">
+                    <h4><i class="fa-solid fa-circle-info"></i> Datos Parseados</h4>
+                    <div class="card-body" id="netExtra" style="min-height: 80px;">-</div>
                 </div>
             </div>
         </div>
@@ -1270,10 +1392,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         }
 
         function switchView(view) {
-            document.getElementById('tabBtnChat').classList.toggle('active', view === 'chat');
-            document.getElementById('tabBtnRecon').classList.toggle('active', view === 'recon');
+            ['chat','recon','creds','vulns','net'].forEach(v => {
+                const btn = document.getElementById('tabBtn' + v.charAt(0).toUpperCase() + v.slice(1));
+                if (btn) btn.classList.toggle('active', view === v);
+            });
             document.getElementById('chatView').style.display = view === 'chat' ? 'flex' : 'none';
             document.getElementById('reconView').style.display = view === 'recon' ? 'flex' : 'none';
+            document.getElementById('credsView').style.display = view === 'creds' ? 'flex' : 'none';
+            document.getElementById('vulnsView').style.display = view === 'vulns' ? 'flex' : 'none';
+            document.getElementById('netView').style.display = view === 'net' ? 'flex' : 'none';
         }
 
         async function fetchStatus() {
@@ -1481,7 +1608,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             }
 
             msgDiv.innerHTML = `
-                <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI</div>
+                <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> BLOOD-CIPHER</div>
                 <div class="msg-body">${parsedHtml}</div>
             `;
             stream.appendChild(msgDiv);
@@ -1612,6 +1739,157 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             input.focus();
         }
 
+        // === CREDENTIAL AUDIT FUNCTIONS ===
+        async function runCredAudit() {
+            const rawInput = document.getElementById('credsHashInput').value.trim();
+            if (!rawInput) { alert('Ingresa al menos un hash para crackear.'); return; }
+            const hashType = document.getElementById('credsHashType').value;
+            const method = document.getElementById('credsMethod').value;
+            const btn = document.getElementById('btnCrackHash');
+            btn.innerHTML = '<div class="spinner"></div> Crackeando...';
+            btn.disabled = true;
+            document.getElementById('credsResults').innerText = 'Procesando hashes con ' + method + '...';
+            try {
+                const res = await fetch('/api/audit/creds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hashes: rawInput, hash_type: hashType, method: method })
+                });
+                const data = await res.json();
+                let html = '';
+                if (data.results && data.results.length > 0) {
+                    html = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
+                    html += '<tr style="border-bottom:1px solid #26334a;"><th style="text-align:left;padding:6px;color:#fff;">Hash</th><th style="text-align:left;padding:6px;color:#fff;">Tipo</th><th style="text-align:left;padding:6px;color:#fff;">Contraseña</th><th style="padding:6px;color:#fff;">Tiempo</th><th style="padding:6px;color:#fff;">Estado</th></tr>';
+                    data.results.forEach(r => {
+                        const statusIcon = r.status === 'cracked' ? '✅' : (r.status === 'error' ? '⚠️' : '❌');
+                        const pwColor = r.status === 'cracked' ? 'color:#00ff9d;font-weight:700;' : 'color:#64748b;';
+                        html += `<tr style="border-bottom:1px solid #1a2333;"><td style="padding:6px;color:#94a3b8;font-family:'Fira Code',monospace;font-size:0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.original_hash)}">${escapeHtml(r.original_hash.substring(0,30))}${r.original_hash.length>30?'...':''}</td><td style="padding:6px;color:#00f0ff;">${r.hash_type}</td><td style="padding:6px;${pwColor}">${r.cracked_password || '-'}</td><td style="padding:6px;color:#cbd5e1;text-align:center;">${r.time_seconds}s</td><td style="padding:6px;text-align:center;">${statusIcon}</td></tr>`;
+                    });
+                    html += '</table>';
+                    const cracked = data.results.filter(r => r.status === 'cracked').length;
+                    html += `<div style="margin-top:10px;font-size:0.85rem;color:#00ff9d;font-weight:700;">✅ ${cracked}/${data.results.length} hashes crackeados</div>`;
+                } else {
+                    html = data.error || 'Sin resultados.';
+                }
+                document.getElementById('credsResults').innerHTML = html;
+            } catch (e) {
+                document.getElementById('credsResults').innerText = 'Error: ' + e;
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-unlock-keyhole"></i> CRACKEAR';
+                btn.disabled = false;
+            }
+        }
+
+        async function analyzePassword() {
+            const pw = document.getElementById('credsPwAnalyze').value.trim();
+            if (!pw) return;
+            try {
+                const res = await fetch('/api/audit/creds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ analyze_password: pw })
+                });
+                const data = await res.json();
+                if (data.analysis) {
+                    const a = data.analysis;
+                    const gradeColors = {'A+':'#00ff9d','A':'#00ff9d','B':'#00f0ff','C':'#fbbf24','D':'#f87171','F':'#ff3366'};
+                    const barColor = gradeColors[a.grade] || '#fff';
+                    const barWidth = Math.max(5, a.score);
+                    let html = `<div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;"><span style="font-size:1.8rem;font-weight:900;color:${barColor};">${a.grade}</span><div style="flex:1;"><div style="height:8px;background:#1a2333;border-radius:4px;overflow:hidden;"><div style="height:100%;width:${barWidth}%;background:${barColor};border-radius:4px;transition:width 0.5s;"></div></div></div><span style="font-size:0.9rem;font-weight:700;color:${barColor};">${a.score}/100</span></div>`;
+                    html += `<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;">Entropía: ${a.entropy} bits | Longitud: ${a.length} | Mayúsculas: ${a.has_upper?'✅':'❌'} Minúsculas: ${a.has_lower?'✅':'❌'} Números: ${a.has_digits?'✅':'❌'} Especiales: ${a.has_special?'✅':'❌'}</div>`;
+                    if (a.is_common) html += '<div style="color:#ff3366;font-weight:700;font-size:0.82rem;">⚠️ Contraseña extremadamente común</div>';
+                    if (a.feedback && a.feedback.length) {
+                        html += '<div style="margin-top:6px;">' + a.feedback.map(f => `<div style="font-size:0.8rem;color:#cbd5e1;">${escapeHtml(f)}</div>`).join('') + '</div>';
+                    }
+                    const el = document.getElementById('credsStrengthResult');
+                    el.innerHTML = html;
+                    el.style.display = 'block';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // === VULNERABILITY SCAN FUNCTIONS ===
+        async function runVulnScan() {
+            const target = document.getElementById('vulnsTargetInput').value.trim();
+            if (!target) { alert('Ingresa un dominio o IP objetivo.'); return; }
+            const scanType = document.getElementById('vulnsScanType').value;
+            const btn = document.getElementById('btnRunVulns');
+            btn.innerHTML = '<div class="spinner"></div> Escaneando...';
+            btn.disabled = true;
+            document.getElementById('vulnsHeaders').innerText = 'Analizando...';
+            document.getElementById('vulnsSsl').innerText = 'Auditando...';
+            document.getElementById('vulnsCms').innerText = 'Detectando...';
+            document.getElementById('vulnsFindings').innerText = 'Escaneando...';
+            try {
+                const res = await fetch('/api/audit/vulns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target, scan_type: scanType })
+                });
+                const data = await res.json();
+                if (data.results) {
+                    data.results.forEach(r => {
+                        if (r.scanner === 'headers') document.getElementById('vulnsHeaders').innerText = r.raw_output || r.title;
+                        else if (r.scanner === 'testssl' || r.scanner === 'openssl') document.getElementById('vulnsSsl').innerText = r.raw_output || r.title;
+                        else if (r.scanner === 'cms') document.getElementById('vulnsCms').innerText = r.raw_output || r.title;
+                        else document.getElementById('vulnsFindings').innerText += '\n' + (r.raw_output || r.title);
+                    });
+                    // Clear default for findings if nothing was added
+                    if (document.getElementById('vulnsFindings').innerText === 'Escaneando...') {
+                        document.getElementById('vulnsFindings').innerText = 'Sin hallazgos adicionales.';
+                    }
+                } else {
+                    document.getElementById('vulnsHeaders').innerText = data.error || 'Error';
+                }
+            } catch (e) {
+                document.getElementById('vulnsHeaders').innerText = 'Error: ' + e;
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> LANZAR AUDITORÍA';
+                btn.disabled = false;
+            }
+        }
+
+        // === NETWORK AUDIT FUNCTIONS ===
+        async function runNetAudit() {
+            const target = document.getElementById('netTargetInput').value.trim();
+            if (!target) { alert('Ingresa un objetivo (IP, CIDR o dominio).'); return; }
+            const scanType = document.getElementById('netScanType').value;
+            const ports = document.getElementById('netPorts').value;
+            const btn = document.getElementById('btnRunNet');
+            btn.innerHTML = '<div class="spinner"></div> Analizando...';
+            btn.disabled = true;
+            document.getElementById('netResults').innerText = 'Ejecutando análisis de red...';
+            document.getElementById('netParsed').innerText = 'Procesando...';
+            document.getElementById('netExtra').innerText = 'Procesando...';
+            try {
+                const res = await fetch('/api/audit/network', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target, scan_type: scanType, ports: ports })
+                });
+                const data = await res.json();
+                document.getElementById('netResults').innerText = data.raw_output || data.error || 'Completado.';
+                if (data.parsed_data) {
+                    if (data.parsed_data.open_ports) {
+                        document.getElementById('netParsed').innerText = 'Puertos abiertos: ' + data.parsed_data.open_ports.join(', ');
+                    } else if (data.parsed_data.hosts) {
+                        document.getElementById('netParsed').innerText = 'Hosts activos: ' + data.parsed_data.total + '\n' + data.parsed_data.hosts.map(h => (h.ip || '') + ' ' + (h.hostname || '') + ' ' + (h.mac || '')).join('\n');
+                    } else {
+                        document.getElementById('netParsed').innerText = JSON.stringify(data.parsed_data, null, 2);
+                    }
+                    document.getElementById('netExtra').innerText = JSON.stringify(data.parsed_data, null, 2);
+                } else {
+                    document.getElementById('netParsed').innerText = '-';
+                    document.getElementById('netExtra').innerText = '-';
+                }
+            } catch (e) {
+                document.getElementById('netResults').innerText = 'Error: ' + e;
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> EJECUTAR ANÁLISIS';
+                btn.disabled = false;
+            }
+        }
+
         function handleKey(e) {
             if (e.key === 'Enter') submitPrompt();
         }
@@ -1622,7 +1900,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             const stream = document.getElementById('chatStream');
             stream.innerHTML = `
                 <div class="chat-msg assistant">
-                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> CODER-KALI</div>
+                    <div class="msg-header"><i class="fa-solid fa-shield-halved"></i> BLOOD-CIPHER</div>
                     <div class="msg-body">Nueva sesión táctica iniciada. ¿Cuál es el objetivo?</div>
                 </div>
             `;
@@ -1975,6 +2253,115 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
                 self.send_error(400, "Nombre y contenido requeridos")
             return
 
+        elif path == "/api/audit/creds":
+            try:
+                from coder_kali.audit_modules import CredentialAuditor
+                auditor = CredentialAuditor()
+
+                # Mode: Password strength analysis
+                if data.get("analyze_password"):
+                    analysis = auditor.analyze_password(data["analyze_password"])
+                    self._send_json({"analysis": analysis.to_dict()})
+                    return
+
+                # Mode: Hash cracking
+                raw_hashes = data.get("hashes", "")
+                hash_type = data.get("hash_type", "auto")
+                method = data.get("method", "native")
+
+                lines = [l.strip() for l in raw_hashes.strip().splitlines() if l.strip()]
+                results = []
+
+                for line in lines:
+                    # Parse user:hash format
+                    h = line
+                    if ":" in line and not line.startswith("$"):
+                        parts = line.split(":", 1)
+                        h = parts[1].strip() if parts[1].strip() else parts[0].strip()
+
+                    ht = hash_type if hash_type != "auto" else None
+
+                    if method == "john":
+                        result = auditor.crack_with_john(h, hash_format=ht)
+                    elif method == "hashcat":
+                        result = auditor.crack_with_hashcat(h)
+                    else:
+                        result = auditor.crack_hash_native(h, hash_type=ht)
+
+                    results.append(result.to_dict())
+
+                self._send_json({"results": results})
+            except Exception as e:
+                self._send_json({"error": str(e)})
+            return
+
+        elif path == "/api/audit/vulns":
+            try:
+                from coder_kali.audit_modules import VulnerabilityScanner
+                scanner = VulnerabilityScanner()
+                target = data.get("target", "").strip()
+                scan_type = data.get("scan_type", "all")
+
+                if not target:
+                    self._send_json({"error": "Target requerido"})
+                    return
+
+                results = []
+                if scan_type == "all":
+                    vuln_results = scanner.quick_vuln_scan(target)
+                    results = [r.to_dict() for r in vuln_results]
+                elif scan_type == "headers":
+                    results = [scanner.header_analysis(target).to_dict()]
+                elif scan_type == "ssl":
+                    results = [scanner.ssl_audit(target).to_dict()]
+                elif scan_type == "cms":
+                    results = [scanner.cms_detection(target).to_dict()]
+                elif scan_type == "nuclei":
+                    results = [scanner.nuclei_scan(target).to_dict()]
+                elif scan_type == "nikto":
+                    results = [scanner.nikto_scan(target).to_dict()]
+
+                self._send_json({"results": results})
+            except Exception as e:
+                self._send_json({"error": str(e)})
+            return
+
+        elif path == "/api/audit/network":
+            try:
+                from coder_kali.audit_modules import NetworkAuditor
+                net_auditor = NetworkAuditor()
+                target = data.get("target", "").strip()
+                scan_type = data.get("scan_type", "ports")
+                ports = data.get("ports", "top1000")
+
+                if not target:
+                    self._send_json({"error": "Target requerido"})
+                    return
+
+                result = None
+                if scan_type == "ports":
+                    result = net_auditor.advanced_port_scan(target, ports=ports)
+                elif scan_type == "discovery":
+                    result = net_auditor.host_discovery(target)
+                elif scan_type == "services":
+                    result = net_auditor.service_enumeration(target)
+                elif scan_type == "os":
+                    result = net_auditor.os_detection(target)
+                elif scan_type == "dns":
+                    result = net_auditor.dns_enumeration(target)
+                elif scan_type == "traceroute":
+                    result = net_auditor.traceroute_analysis(target)
+                else:
+                    result = net_auditor.advanced_port_scan(target, ports=ports)
+
+                if result:
+                    self._send_json(result.to_dict())
+                else:
+                    self._send_json({"error": "No se pudo ejecutar el análisis"})
+            except Exception as e:
+                self._send_json({"error": str(e)})
+            return
+
         self.send_error(404, "Ruta no encontrada")
 
     def _send_json(self, data: Any):
@@ -1995,7 +2382,7 @@ def start_web_server(port: int = 7777, open_browser: bool = True):
         httpd = HTTPServer(server_address, CoderKaliHTTPHandler)
 
     url = f"http://localhost:{port}"
-    console.print(f"\n[bold white]⚡ Centro de Operaciones Coder-Kali Activo:[/bold white] [bold cyan]{url}[/bold cyan]")
+    console.print(f"\n[bold white]⚡ Centro de Operaciones Blood-Cipher Activo:[/bold white] [bold red]{url}[/bold red]")
     console.print("[dim]Presiona Ctrl+C en esta terminal para detener el servidor.[/dim]\n")
 
     if open_browser:

@@ -17,18 +17,18 @@ from rich.box import ROUNDED, DOUBLE, HEAVY
 console = Console()
 
 BANNER_ART = r"""
-  ██████╗ ██████╗ ██████╗ ███████╗██████╗       ██╗  ██╗ █████╗ ██╗     ██╗
- ██╔════╝██╔═══██╗██╔══██╗██╔════╝██╔══██╗      ██║ ██╔╝██╔══██╗██║     ██║
- ██║     ██║   ██║██║  ██║█████╗  ██████╔╝█████╗█████╔╝ ███████║██║     ██║
- ██║     ██║   ██║██║  ██║██╔══╝  ██╔══██╗╚════╝██╔═██╗ ██╔══██║██║     ██║
- ╚██████╗╚██████╔╝██████╔╝███████╗██║  ██║      ██║  ██╗██║  ██║███████╗██║
-  ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝      ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝
+  ██████╗ ██╗      ██████╗  ██████╗ ██████╗       ██████╗██╗██████╗ ██╗  ██╗███████╗██████╗ 
+  ██╔══██╗██║     ██╔═══██╗██╔═══██╗██╔══██╗     ██╔════╝██║██╔══██╗██║  ██║██╔════╝██╔══██╗
+  ██████╔╝██║     ██║   ██║██║   ██║██║  ██║     ██║     ██║██████╔╝███████║█████╗  ██████╔╝
+  ██╔══██╗██║     ██║   ██║██║   ██║██║  ██║     ██║     ██║██╔═══╝ ██╔══██║██╔══╝  ██╔══██╗
+  ██████╔╝███████╗╚██████╔╝╚██████╔╝██████╔╝     ╚██████╗██║██║     ██║  ██║███████╗██║  ██║
+  ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝       ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
 
 
-def print_banner(version: str = "1.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None):
+def print_banner(version: str = "1.5.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None):
     """Imprime el banner principal estilo hacker/cyberpunk con metadata de sesión."""
-    console.print(f"[bold bright_cyan]{BANNER_ART}[/bold bright_cyan]")
+    console.print(f"[bold red]{BANNER_ART}[/bold red]")
 
     info_table = Table.grid(padding=(0, 2))
     info_table.add_column(style="bold bright_green")
