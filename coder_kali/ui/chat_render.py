@@ -67,15 +67,24 @@ def render_user_message(message: str):
 
 
 def render_ai_message(message: str):
-    """Renderiza el razonamiento o respuesta de Blood-Cipher en formato Markdown enriquecido."""
+    """Renderiza el razonamiento o respuesta de Blood-Cipher en formato Markdown limpio."""
+    import re
     console.print()
     header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
     console.print(header)
 
-    # Limpiar etiquetas XML del texto visible si se desea mostrar más limpio
-    display_text = message
-    # Mantener el texto formateado
-    md = Markdown(display_text, code_theme="monokai", hyperlinks=True)
+    # Filtrar las etiquetas XML del mensaje visual para que no ensucien el chat
+    # (Los comandos ya se muestran en su propio panel interactivo de ejecución)
+    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', message)
+    cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text)
+    
+    # Limpiar líneas vacías excesivas tras la remoción
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text).strip()
+    
+    if not cleaned_text:
+        cleaned_text = "[italic dim]Ejecutando operaciones tácticas solicitadas...[/italic dim]"
+
+    md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(
         md,
         border_style="bright_cyan",
