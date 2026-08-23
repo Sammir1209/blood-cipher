@@ -346,12 +346,28 @@ class KaliAgent:
                     "basándote en toda la información recopilada del objetivo."
                 )
                 self.messages.append({"role": "user", "content": synth_prompt})
-                import litellm
-                litellm.drop_params = True
-                kwargs = self._prepare_call_kwargs()
-                res = litellm.completion(**kwargs)
-                choice = res.choices[0]
-                synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                synth_text = ""
+                provider = self.config_mgr.get_active_provider()
+                model = self.config_mgr.get_active_model()
+                if provider == "ollama":
+                    from coder_kali.fast_engine import OllamaFastClient
+                    api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
+                    ollama_client = OllamaFastClient(host=api_base)
+                    res = ollama_client.chat_completion(
+                        model=model,
+                        messages=self._get_api_messages(),
+                        temperature=self.config_mgr.get("temperature", 0.2),
+                        timeout=180,
+                    )
+                    synth_text = res.get("content", "")
+                else:
+                    import litellm
+                    litellm.drop_params = True
+                    kwargs = self._prepare_call_kwargs()
+                    res = litellm.completion(**kwargs)
+                    choice = res.choices[0]
+                    synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+
                 if synth_text and not (synth_text.strip().startswith('{"cmd"') or synth_text.strip().startswith('{"command"')):
                     final_response = synth_text
                     render_ai_message(synth_text)
