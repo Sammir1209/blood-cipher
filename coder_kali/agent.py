@@ -181,6 +181,25 @@ class KaliAgent:
             while retry_count < max_retries:
                 with console.status("[bold cyan]Blood-Cipher está pensando...[/bold cyan]", spinner="dots"):
                     try:
+                        provider = self.config_mgr.get_active_provider()
+                        model = self.config_mgr.get_active_model()
+
+                        # Fast-Path: Inferencia directa ultrarrápida si el modelo es Ollama
+                        if provider == "ollama":
+                            from coder_kali.fast_engine import OllamaFastClient
+                            ollama_client = OllamaFastClient()
+                            res = ollama_client.chat_completion(
+                                model=model,
+                                messages=self._get_api_messages(),
+                                temperature=self.config_mgr.get("temperature", 0.2),
+                            )
+                            if "content" in res and res["content"]:
+                                ai_content = res["content"]
+                                break
+                            elif "error" in res:
+                                # Fallback a LiteLLM si falla
+                                pass
+
                         import litellm
                         import time
                         litellm.suppress_debug_info = True

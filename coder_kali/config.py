@@ -292,18 +292,18 @@ class ConfigManager:
             self._save_raw(cfg)
             return cfg
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                merged = DEFAULT_CONFIG.copy()
-                merged.update(data)
-                return merged
+            from coder_kali.fast_engine import fast_json_loads
+            data = fast_json_loads(CONFIG_FILE.read_bytes())
+            merged = DEFAULT_CONFIG.copy()
+            merged.update(data)
+            return merged
         except Exception:
             return DEFAULT_CONFIG.copy()
 
-    def _save_raw(self, data: Dict[str, Any]):
+    def _save_raw(self, cfg: Dict[str, Any]):
         try:
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            from coder_kali.fast_engine import fast_json_dumps
+            CONFIG_FILE.write_text(fast_json_dumps(cfg, indent=True), encoding="utf-8")
             try:
                 os.chmod(CONFIG_FILE, 0o600)
             except Exception:

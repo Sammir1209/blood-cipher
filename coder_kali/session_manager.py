@@ -96,8 +96,8 @@ class SessionManager:
 
         file_path = SESSIONS_DIR / f"{session.id}.json"
         try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(session.to_dict(), f, indent=2, ensure_ascii=False)
+            from coder_kali.fast_engine import fast_json_dumps
+            file_path.write_text(fast_json_dumps(session.to_dict(), indent=True), encoding="utf-8")
         except Exception as e:
             console.print(f"[dim red][!] Error al guardar historial de sesión: {e}[/dim red]")
 
@@ -107,20 +107,21 @@ class SessionManager:
         if not file_path.exists():
             return None
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return ChatSession.from_dict(data)
-        except Exception:
+            from coder_kali.fast_engine import fast_json_loads
+            data = fast_json_loads(file_path.read_bytes())
+            return ChatSession.from_dict(data)
+        except Exception as e:
+            console.print(f"[dim red][!] Error al leer sesión {session_id}: {e}[/dim red]")
             return None
 
     def list_sessions(self) -> List[ChatSession]:
         """Lista todas las sesiones ordenadas por la más reciente."""
         sessions = []
+        from coder_kali.fast_engine import fast_json_loads
         for file in SESSIONS_DIR.glob("*.json"):
             try:
-                with open(file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    sessions.append(ChatSession.from_dict(data))
+                data = fast_json_loads(file.read_bytes())
+                sessions.append(ChatSession.from_dict(data))
             except Exception:
                 continue
         # Ordenar por updated_at descendente

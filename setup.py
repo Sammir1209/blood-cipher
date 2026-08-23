@@ -50,9 +50,13 @@ setup(
         "beautifulsoup4>=4.12.0",
         "requests>=2.31.0",
         "python-dotenv>=1.0.0",
+        "orjson>=3.9.0",
     ],
     extras_require={
-        ":sys_platform != 'win32'": ["pexpect>=4.9.0"],
+        ":sys_platform != 'win32'": [
+            "pexpect>=4.9.0",
+            "uvloop>=0.19.0",
+        ],
     },
     entry_points={
         "console_scripts": [
