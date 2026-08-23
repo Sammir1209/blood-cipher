@@ -1,11 +1,11 @@
 """
-training/dataset_generator.py - Generador Élite de Dataset para Blood-Cipher v3.0 (700+ Muestras).
-Compila un dataset masivo de más de 700 ejemplos estructurados que abarcan:
-1. OSINT, BGP/ASN, WHOIS, DNS & Cloud Recon (140 ejemplos)
-2. Network Mapping, Port Scanning, UDP & Firewall/WAF Evasion (140 ejemplos)
-3. Web Auditing, API Security, Nuclei, Fuzzing & CMS Security (140 ejemplos)
-4. Cryptography, Hashes, Shadow, Kerberos & Credential Auditing (140 ejemplos)
-5. Linux Hardening, Incident Response, Forensics, SUID & Kernel Auditing (140 ejemplos)
+training/dataset_generator.py - Generador Élite de Dataset para Blood-Cipher v4.0 (1000+ Muestras).
+Compila un dataset masivo estructurado para auditorías de seguridad defensivas y ofensivas autorizadas:
+1. OSINT Profundo, Mapeo Perimetral, BGP/ASN, Cloud Recon & DNS (200 ejemplos)
+2. Auditoría de Redes, Mapeo de Puertos, Detección de Servicios & Evasión de Filtros (200 ejemplos)
+3. Auditoría Web, Identificación de Vulnerabilidades (SQLi, XSS, SSRF, IDOR), APIs & CMS (200 ejemplos)
+4. Auditoría de Autenticación, Análisis Criptográfico, Hashes & Volcados de Credenciales (200 ejemplos)
+5. Hardening, Análisis Forense, Parsing de Logs, Detección de SUIDs & Automatización en Linux (200 ejemplos)
 """
 
 import json
@@ -16,11 +16,11 @@ OUTPUT_FILE = OUTPUT_DIR / "blood_cipher_dataset.jsonl"
 
 SYSTEM_PROMPT = """Eres Blood-Cipher v1.5, un agente de Inteligencia Artificial táctico de élite especializado en hacktivismo técnico, reconocimiento OSINT 360°, auditoría de vulnerabilidades e ingeniería de sistemas Linux. Tu directiva fundamental es la persistencia táctica y la resolución autónoma de objetivos: si una técnica, escaneo, extracción o auditoría encuentra obstáculos, no te detengas ni uses respuestas genéricas; diagnostica el fallo, adapta la estrategia y ejecuta métodos alternativos hasta completar la tarea con éxito total. Utiliza siempre los delimitadores XML <ejecutar_comando>comando_aqui</ejecutar_comando> o <escribir_archivo ruta="/ruta/archivo">contenido</escribir_archivo>."""
 
-def build_700_samples():
+def build_1000_samples():
     samples = []
 
     # =========================================================================
-    # 1. OSINT, DOMINIOS, DNS, INFRAESTRUCTURA & CLOUD (140 EJEMPLOS - 28 DOMINIOS x 5)
+    # 1. OSINT PROFUNDO, CLOUD, BGP & ENUMERACIÓN PERIMETRAL (200 EJEMPLOS - 40 DOMINIOS x 5)
     # =========================================================================
     domains_data = [
         ("target-corp.com", "infraestructura central corporativa"),
@@ -51,9 +51,22 @@ def build_700_samples():
         ("quantum-labs.ai", "clúster de cálculo algorítmico"),
         ("satellite-uplink.space", "estación de telemetría satelital"),
         ("smart-city-net.io", "controlador central de semáforos"),
+        ("biotech-genomics.org", "repositorio de secuencias genéticas"),
+        ("clearing-house.eu", "cámara de compensación interbancaria"),
+        ("defense-logistics.mil", "red logística de suministros"),
+        ("maritime-traffic.net", "sistema de seguimiento AIS marítimo"),
+        ("railways-signaling.co", "control de enclavamientos ferroviarios"),
+        ("nuclear-sensor-net.org", "telemetría de reactores de investigación"),
+        ("water-purification.gov", "red de monitorización de presas y agua"),
+        ("air-traffic-control.aero", "servidor de planes de vuelo radar"),
+        ("mining-teleop.com", "teleoperación de maquinaria pesada"),
+        ("secure-cloud-id.net", "proveedor de identidad federada SAML/OIDC"),
+        ("payments-switch.int", "procesador de transacciones ISO 8583"),
+        ("grid-telemetry.pe", "subestaciones eléctricas de alta tensión"),
     ]
 
     for domain, desc in domains_data:
+        dom_clean = domain.replace('.', '_').replace('-', '_')
         # DNS & WHOIS
         samples.append({
             "instruction": f"Realiza un reconocimiento pasivo y mapeo DNS completo para {domain} ({desc})",
@@ -69,17 +82,17 @@ dig {domain} MX +short && dig {domain} TXT +short
 </ejecutar_comando>"""
         })
 
-        # Subdomains
+        # Subdomains & Live validation
         samples.append({
             "instruction": f"Encuentra todos los subdominios activos de {domain} y valida los que responden por HTTP/HTTPS",
             "response": f"""Ejecutando pipeline de enumeración de subdominios para **{domain}**:
 
 <ejecutar_comando>
-subfinder -d {domain} -silent | assetfinder --subs-only | sort -u > subdominios_{domain.replace('.', '_')}.txt && httpx -l subdominios_{domain.replace('.', '_')}.txt -silent -status-code -title -tech-detect -o activos_{domain.replace('.', '_')}.txt
+subfinder -d {domain} -silent | assetfinder --subs-only | sort -u > subdominios_{dom_clean}.txt && httpx -l subdominios_{dom_clean}.txt -silent -status-code -title -tech-detect -o activos_{dom_clean}.txt
 </ejecutar_comando>"""
         })
 
-        # CT Logs
+        # Certificate Transparency logs
         samples.append({
             "instruction": f"Inspecciona los registros históricos de certificados SSL (CT Logs) para {domain}",
             "response": f"""Consultando crt.sh para extraer dominios históricos y certificados emitidos para **{domain}**:
@@ -110,7 +123,7 @@ host {domain} | awk '/has address/ {{print $4}}' | while read ip; do whois $ip |
         })
 
     # =========================================================================
-    # 2. ESCANEO, MAPEO Y AUDITORÍA DE RED (140 EJEMPLOS - 28 HOSTS x 5)
+    # 2. ESCANEO, MAPEO Y AUDITORÍA DE RED (200 EJEMPLOS - 40 HOSTS x 5)
     # =========================================================================
     network_hosts = [
         ("192.168.1.1", "gateway principal"),
@@ -141,6 +154,18 @@ host {domain} | awk '/has address/ {{print $4}}' | while read ip; do whois $ip |
         ("172.19.1.5", "panel de administración Proxmox VE"),
         ("192.168.4.10", "servidor TFTP de arranque PXE"),
         ("10.77.0.1", "concentrador WireGuard VPN"),
+        ("192.168.30.1", "controlador inalámbrico UniFi"),
+        ("10.99.1.1", "servidor RADIUS FreeRADIUS"),
+        ("172.28.0.10", "nodo clúster RabbitMQ"),
+        ("192.168.200.1", "interfaz de gestión IPMI/iDRAC"),
+        ("10.15.0.20", "nodo de almacenamiento Ceph"),
+        ("172.22.4.8", "servidor MinIO Object Storage"),
+        ("192.168.70.1", "enrutador Cisco IOS-XE"),
+        ("10.4.0.5", "servidor HashiCorp Consul"),
+        ("172.17.0.1", "daemon Docker bridge host"),
+        ("192.168.60.2", "nodo de telemetría InfluxDB"),
+        ("10.2.2.2", "servidor NTP Stratum-1"),
+        ("172.30.0.100", "servidor OpenShift API"),
     ]
 
     for ip, role in network_hosts:
@@ -191,7 +216,7 @@ sudo nmap --script vuln -sV -Pn {ip} -oN nmap_vulns_{ip_tag}.txt
         })
 
     # =========================================================================
-    # 3. AUDITORÍA WEB, API & CMS (140 EJEMPLOS - 28 OBJETIVOS x 5)
+    # 3. AUDITORÍA WEB, VULNERABILIDADES, APIS & CMS (200 EJEMPLOS - 40 OBJETIVOS x 5)
     # =========================================================================
     web_targets = [
         ("https://shop.target.pe", "tienda online e-commerce"),
@@ -222,6 +247,18 @@ sudo nmap --script vuln -sV -Pn {ip} -oN nmap_vulns_{ip_tag}.txt
         ("https://strapi.headless-cms.io", "panel de CMS Strapi Node.js"),
         ("https://odoo.erp-enterprise.pe", "suite empresarial ERP Odoo"),
         ("https://magento.boutique-store.com", "tienda Magento Adobe Commerce"),
+        ("https://drupal.portal-noticias.org", "portal CMS Drupal 10"),
+        ("https://joomla.revista-digital.net", "sitio CMS Joomla"),
+        ("https://ghost.blog-personal.io", "publicación Ghost CMS"),
+        ("https://directus.api-backend.com", "panel Directus Headless"),
+        ("https://keycloak.identity-hub.org", "servidor de identidad Keycloak"),
+        ("https://portainer.docker-ui.local", "gestor de contenedores Portainer"),
+        ("https://harbor.registry-k8s.io", "registro de imágenes Harbor"),
+        ("https://airflow.pipelines-data.net", "orquestador Apache Airflow"),
+        ("https://metabase.bi-analytics.com", "panel de analítica Metabase"),
+        ("https://superset.dashboards-bi.org", "Apache Superset BI"),
+        ("https://n8n.automation-flows.io", "nodo de automatización n8n"),
+        ("https://zabbix.monitoring-net.pe", "panel de monitoreo Zabbix"),
     ]
 
     for url, desc in web_targets:
@@ -262,16 +299,21 @@ whatweb -a 3 {url} --color=always
         })
 
         samples.append({
-            "instruction": f"Realiza un escaneo de seguridad web con Nikto para identificar configuraciones inseguras en {url}",
-            "response": f"""Lanzando análisis de configuraciones de servidor web con `nikto`:
+            "instruction": f"Realiza una prueba de inyección SQL automatizada y extracción segura de esquemas en {url}/search?q=test",
+            "response": f"""Ejecutando auditoría de inyección SQL con `sqlmap` en **{url}/search?q=test**:
 
 <ejecutar_comando>
-nikto -h {url} -Tuning 123bde -o nikto_report.txt -Format txt
+sqlmap -u "{url}/search?q=test" --batch --random-agent --level=2 --risk=2 --dbs
+</ejecutar_comando>
+
+Si se detecta vulnerabilidad, para listar tablas y esquemas de la base de datos:
+<ejecutar_comando>
+sqlmap -u "{url}/search?q=test" --batch --random-agent -D target_db --tables
 </ejecutar_comando>"""
         })
 
     # =========================================================================
-    # 4. CRIPTOGRAFÍA, HASHES, SHADOW Y CREDENCIALES (140 EJEMPLOS - 28 HASHES x 5)
+    # 4. AUDITORÍA DE AUTENTICACIÓN, HASHES, SHADOW & CREDENCIALES (200 EJEMPLOS - 40 ESCENARIOS x 5)
     # =========================================================================
     hashes_data = [
         ("5f4dcc3b5aa765d61d8327deb882cf99", "MD5", "password"),
@@ -302,6 +344,18 @@ nikto -h {url} -Tuning 123bde -o nikto_report.txt -Format txt
         ("b10a8db164e0754105b7a99be72e3fe5", "MD5", "hello"),
         ("1a1dc91c907325c69271ddf0c944bc72", "MD5", "pass"),
         ("a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", "SHA-256", "123"),
+        ("286755fad04869ca523320acce0dc6a4", "MD5", "qwerty123"),
+        ("fc3ff98e8c6a0d3087d515c0473f8677", "MD5", "kali2026"),
+        ("6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b", "SHA-256", "1"),
+        ("d41d8cd98f00b204e9800998ecf8427e", "MD5", "empty"),
+        ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "SHA-1", "empty"),
+        ("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "SHA-256", "empty"),
+        ("cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e", "SHA-512", "empty"),
+        ("0192023a7bbd73250516f069df18b500", "NTLM", "password123"),
+        ("877708d752408c697843d1828114f6b1", "NTLM", "Password1"),
+        ("32ed87b22c4eb327c4249d0f546cf751", "NTLM", "12345678"),
+        ("e80b5017098950fc58aad83c8c14978e", "NTLM", "letmein"),
+        ("f75b8179e4bbe7e2b4a074d239b469ec", "NTLM", "welcome"),
     ]
 
     for h_val, h_type, _ in hashes_data:
@@ -325,7 +379,7 @@ echo "{h_val}" > /tmp/h_{h_val[:8]}.txt && john --format=raw-{h_type.lower().rep
             "response": f"""Lanzando ataque por diccionario en Hashcat con optimización de GPU:
 
 <ejecutar_comando>
-echo "{h_val}" > /tmp/target_hash.txt && hashcat -m {'0' if h_type == 'MD5' else ('100' if h_type == 'SHA-1' else ('1400' if h_type == 'SHA-256' else '1000'))} -a 0 /tmp/target_hash.txt /usr/share/wordlists/rockyou.txt -O
+echo "{h_val}" > /tmp/target_hash.txt && hashcat -m {'0' if h_type == 'MD5' else ('100' if h_type == 'SHA-1' else ('1400' if h_type == 'SHA-256' else ('1700' if h_type == 'SHA-512' else '1000')))} -a 0 /tmp/target_hash.txt /usr/share/wordlists/rockyou.txt -O
 </ejecutar_comando>"""
         })
 
@@ -357,7 +411,7 @@ john --format=NT --wordlist=/usr/share/wordlists/rockyou.txt /tmp/sam_dump.txt
         })
 
     # =========================================================================
-    # 5. HARDENING, LINUX, FIREWALLS, FORENSE & SCRIPTS (140 EJEMPLOS - 28 THREATS x 5)
+    # 5. HARDENING, LINUX, FIREWALLS, FORENSE & SCRIPTS (200 EJEMPLOS - 40 THREATS x 5)
     # =========================================================================
     threat_ips = [
         "185.220.101.5", "45.33.32.156", "198.51.100.24", "203.0.113.88", "194.26.29.11",
@@ -365,7 +419,9 @@ john --format=NT --wordlist=/usr/share/wordlists/rockyou.txt /tmp/sam_dump.txt
         "89.248.163.77", "185.196.220.14", "195.123.245.8", "45.154.255.80", "193.142.146.35",
         "185.246.221.90", "194.38.20.112", "45.95.169.12", "195.178.120.4", "185.220.102.8",
         "194.165.16.10", "45.134.144.12", "185.224.128.5", "91.241.19.45", "194.87.68.100",
-        "185.191.171.12", "45.128.232.88", "193.32.162.50",
+        "185.191.171.12", "45.128.232.88", "193.32.162.50", "91.92.241.10", "185.234.218.66",
+        "45.141.215.11", "194.180.174.20", "185.156.73.54", "45.148.10.82", "193.106.191.25",
+        "91.216.107.12", "185.177.125.40", "45.86.208.99", "194.147.140.15", "185.241.208.7",
     ]
 
     for ip_b in threat_ips:
@@ -433,9 +489,9 @@ sudo ss -tulpn | grep LISTEN
 
 
 def generate_dataset():
-    """Compila el dataset JSONL masivo con 700 ejemplos tácticos."""
+    """Compila el dataset JSONL masivo con 1000 ejemplos tácticos."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    samples = build_700_samples()
+    samples = build_1000_samples()
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         for sample in samples:
@@ -448,7 +504,7 @@ def generate_dataset():
             }
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print(f"[OK] Dataset Masivo (700 Muestras) generado con exito en: {OUTPUT_FILE}")
+    print(f"[OK] Dataset Masivo (1000 Muestras) generado con exito en: {OUTPUT_FILE}")
     print(f"[OK] Total de ejemplos estructurados: {len(samples)}")
 
 
