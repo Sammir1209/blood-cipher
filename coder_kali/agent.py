@@ -327,11 +327,17 @@ class KaliAgent:
                 render_execution_result(result, command=action.content if action.action_type == "command" else None)
 
                 if action.action_type == "command":
+                    # Truncar salidas de terminal largas para evitar reventar límites TPM de Groq
+                    cmd_output = result.output or ""
+                    output_lines = cmd_output.split('\n')
+                    if len(output_lines) > 80:
+                        kept = output_lines[:40] + [f"\n[... {len(output_lines) - 60} líneas omitidas para eficiencia ...]\n"] + output_lines[-20:]
+                        cmd_output = '\n'.join(kept)
                     feedback_str = (
                         f"[SALIDA_COMANDO: {action.content}]\n"
                         f"Código de retorno: {result.returncode}\n"
                         f"Éxito: {result.success}\n"
-                        f"Salida:\n{result.output}"
+                        f"Salida:\n{cmd_output}"
                     )
                 else:
                     feedback_str = (
@@ -348,10 +354,14 @@ class KaliAgent:
                     break
 
             # 5. Enviar el feedback de la terminal de regreso a la IA
+            combined_feedback = "\n\n".join(results_feedback)
+            # Limitar el total de feedback a ~4000 chars para no agotar TPM
+            if len(combined_feedback) > 4000:
+                combined_feedback = combined_feedback[:4000] + "\n[... salida truncada por eficiencia de tokens ...]"
             system_feedback_message = (
                 "[RESULTADOS_SISTEMA_INTERCEPTADOS]\n"
-                + "\n\n".join(results_feedback)
-                + "\n\nPor favor interpreta estos resultados y procede con el siguiente paso."
+                + combined_feedback
+                + "\n\nAnaliza estos resultados para el operador, destaca hallazgos clave y formula el siguiente paso."
             )
             self.messages.append({"role": "user", "content": system_feedback_message})
 
@@ -361,45 +371,70 @@ class KaliAgent:
 
         # Turno de análisis e interpretación interactiva de resultados para el operador
         if results_feedback and not should_stop:
-            with console.status("[bold cyan]Blood-Cipher analizando hallazgos de terminal...[/bold cyan]", spinner="dots"):
-                try:
-                    synth_prompt = (
-                        "Interpreta ahora los resultados obtenidos de la terminal de forma detallada e interactiva. "
-                        "Explica al operador qué tecnologías, infraestructura, cabeceras o hallazgos interesantes descubriste y cuál es el siguiente paso lógico."
-                    )
-                    self.messages.append({"role": "user", "content": synth_prompt})
-                    synth_text = ""
-                    provider = self.config_mgr.get_active_provider()
-                    model = self.config_mgr.get_active_model()
-                    if provider == "ollama":
-                        from coder_kali.fast_engine import OllamaFastClient
-                        api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
-                        ollama_client = OllamaFastClient(host=api_base)
-                        res = ollama_client.chat_completion(
-                            model=model,
-                            messages=self._get_api_messages(),
-                            temperature=self.config_mgr.get("temperature", 0.2),
-                            timeout=180,
-                        )
-                        synth_text = res.get("content", "")
-                    else:
-                        import litellm
-                        litellm.drop_params = True
-                        kwargs = self._prepare_call_kwargs()
-                        res = litellm.completion(**kwargs)
-                        choice = res.choices[0]
-                        synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+            synth_prompt = (
+                "Interpreta los resultados obtenidos de la terminal de forma detallada e interactiva. "
+                "Destaca al operador las tecnologías, infraestructura, cabeceras o hallazgos interesantes y cuál es el siguiente paso lógico."
+            )
+            self.messages.append({"role": "user", "content": synth_prompt})
 
-                    if synth_text:
-                        import re
-                        synth_text = re.sub(r'<think>[\s\S]*?</think>', '', synth_text, flags=re.IGNORECASE).strip()
-                        synth_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', synth_text, flags=re.IGNORECASE).strip()
-                        if synth_text:
-                            final_response = synth_text
-                            render_ai_message(synth_text)
-                            self.messages.append({"role": "assistant", "content": synth_text})
-                except Exception as e:
-                    console.print(f"[yellow][!] Nota: No se pudo completar el resumen automático ({str(e)[:60]}).[/yellow]")
+            # Compactar historial agresivamente para la síntesis (conservar system + últimos 4 msgs)
+            synth_messages = [self.messages[0]]  # system prompt
+            synth_messages += self.messages[-4:]  # últimos mensajes (feedback + synth prompt)
+
+            synth_text = ""
+            synth_retries = 3
+            for synth_attempt in range(synth_retries):
+                with console.status(f"[bold cyan]Blood-Cipher analizando hallazgos de terminal...{'(reintento)' if synth_attempt > 0 else ''}[/bold cyan]", spinner="dots"):
+                    try:
+                        provider = self.config_mgr.get_active_provider()
+                        model = self.config_mgr.get_active_model()
+                        if provider == "ollama":
+                            from coder_kali.fast_engine import OllamaFastClient
+                            api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
+                            ollama_client = OllamaFastClient(host=api_base)
+                            res = ollama_client.chat_completion(
+                                model=model,
+                                messages=synth_messages,
+                                temperature=self.config_mgr.get("temperature", 0.2),
+                                timeout=180,
+                            )
+                            synth_text = res.get("content", "")
+                        else:
+                            import litellm
+                            litellm.drop_params = True
+                            # Usar mensajes compactados para la síntesis
+                            synth_kwargs = self._prepare_call_kwargs()
+                            synth_kwargs["messages"] = synth_messages
+                            res = litellm.completion(**synth_kwargs)
+                            choice = res.choices[0]
+                            synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                        break  # Éxito, salir del retry
+
+                    except Exception as e:
+                        err_str = str(e)
+                        is_rate_limit = "rate" in err_str.lower() or "429" in err_str or "tpm" in err_str.lower() or "RateLimitError" in err_str
+                        if is_rate_limit and synth_attempt < synth_retries - 1:
+                            import re as _re
+                            wait = 15 + (synth_attempt * 8)
+                            match = _re.search(r'(?:retry in|try again in\s+)(\d+(?:\.\d+)?)s?', err_str, _re.IGNORECASE)
+                            if match:
+                                wait = max(int(float(match.group(1))) + 2, 10)
+                            console.print(f"[yellow][!] Rate limit en síntesis, esperando {wait}s (intento {synth_attempt+1}/{synth_retries})...[/yellow]")
+                            import time
+                            time.sleep(wait)
+                            continue
+                        else:
+                            console.print(f"[yellow][!] No se pudo generar el análisis automático. Escribe 'continua' para que lo reintente.[/yellow]")
+                            break
+
+            if synth_text:
+                import re
+                synth_text = re.sub(r'<think>[\s\S]*?</think>', '', synth_text, flags=re.IGNORECASE).strip()
+                synth_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', synth_text, flags=re.IGNORECASE).strip()
+                if synth_text:
+                    final_response = synth_text
+                    render_ai_message(synth_text)
+                    self.messages.append({"role": "assistant", "content": synth_text})
 
         # Guardar historial actualizado en la sesión persistente
         self.current_session.messages = list(self.messages)

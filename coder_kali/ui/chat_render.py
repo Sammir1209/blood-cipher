@@ -86,12 +86,16 @@ def render_ai_message(message: str):
 
     # 3. Si no hay texto conversacional pero sí hay comandos, extraer un resumen descriptivo
     if not cleaned_text.strip():
+        # Buscar comandos XML en el texto pre-limpieza y también en el mensaje original (por si estaban dentro de <think>)
         xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', raw_for_preview, flags=re.IGNORECASE)
+        if not xml_cmds:
+            xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', message, flags=re.IGNORECASE)
         if xml_cmds:
             cmd_lines = [c.strip().split('\n')[0] for c in xml_cmds if c.strip()]
-            cleaned_text = "⚡ **Iniciando secuencia de ejecución de terminal:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:4]])
+            cleaned_text = "⚡ **Iniciando secuencia de ejecución:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:6]])
         else:
-            cleaned_text = "[italic dim]Procesando operaciones técnicas...[/italic dim]"
+            # No hay ni texto ni comandos - no renderizar panel vacío
+            return
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(
