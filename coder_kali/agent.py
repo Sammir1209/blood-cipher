@@ -87,19 +87,15 @@ class KaliAgent:
         """
         Genera una versión optimizada del historial para la API sin destruir
         la memoria persistente de la sesión del usuario.
-        Aplica compactación agresiva cuando el proveedor es Groq para evitar rebasar los límites de TPM.
+        Inyecta dinámicamente el Scope activo actual en cada turno.
         """
         effective_sys = self._get_effective_system_prompt()
-        if not self.messages:
-            return [{"role": "system", "content": effective_sys}]
-
-        provider = self.config_mgr.get_active_provider()
-        is_groq = provider == "groq"
-
-        # Mensaje de sistema al inicio
         system_msg = {"role": "system", "content": effective_sys}
         
-        # Filtrar mensajes de conversación (omitir sistema previo si estaba duplicado)
+        provider = self.config_mgr.get_active_provider()
+        is_groq = provider == "groq"
+        
+        # Filtrar mensajes de conversación (omitir sistema previo si estaba guardado)
         chat_msgs = [m for m in self.messages if m.get("role") != "system"]
 
         # En Groq, conservar un número adecuado de turnos recientes

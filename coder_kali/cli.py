@@ -268,8 +268,9 @@ def chat(
                 continue
             elif cleaned_cmd in ["scope", "alcance", "sow", "roe"]:
                 interactive_scope_menu(scope_mgr)
-                # Actualizar prompt del agente en vivo
-                agent.reset_conversation()
+                active_scope_name = scope_mgr.get_active_scope_name()
+                if active_scope_name:
+                    console.print(f"[bold green][✓] Alcance activo actualizado a:[/bold green] [bold white]{active_scope_name}[/bold white]")
                 continue
             elif cleaned_cmd in ["config", "configurar"]:
                 interactive_config_wizard(config_mgr)
