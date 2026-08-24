@@ -98,12 +98,22 @@ class SystemExecutor:
                 if not l_strip:
                     continue
                 # Si es un bullet point o texto conversacional en inglés/español
-                if re.match(r'^(?:[•\-\*]|\d+\.|\b(?:Note|Step|Fase|Phase|Objective|Analyze|Structure)\b)', l_strip, re.IGNORECASE):
+                if re.match(r'^(?:[•\-\*]|\d+\.|[A-Z][a-z]+ [a-z]+ [a-z]+|\b(?:Note|Step|Fase|Phase|Objective|Analyze|Structure|Draft|Use|This|Este|Ejecuta|Copia)\b)', l_strip, re.IGNORECASE):
+                    continue
+                # Si la línea tiene backticks sueltos (instrucciones de formato del modelo, no bash)
+                if l_strip.count('`') >= 2 and not l_strip.startswith(('$', '#', '/', 'sudo', 'apt', 'pip', 'cd', 'cat', 'echo', 'curl', 'wget', 'nmap', 'dig', 'ffuf', 'whatweb', 'gobuster', 'openssl', 'python', 'bash', 'sh', 'grep', 'awk', 'sed', 'find', 'ls', 'chmod', 'chown', 'mkdir', 'cp', 'mv', 'rm', 'touch', 'head', 'tail', 'wc', 'sort', 'uniq', 'tee', 'xargs', 'export', 'source', 'set ')):
+                    continue
+                # Si la línea parece texto conversacional largo (más de 60 chars sin pipes/redirects/flags)
+                if len(l_strip) > 60 and not re.search(r'[|><;&]|\s-[a-zA-Z]', l_strip):
                     continue
                 valid_lines.append(line)
 
             final_cmd = "\n".join(valid_lines).strip()
             if not final_cmd or final_cmd in seen_commands:
+                continue
+            
+            # Validación final: si el "comando" resultante contiene palabras que indican instrucciones del modelo, descartar
+            if re.search(r'\b(for commands|if needed|Draft:|Operador|ejecutar_comando|escribir_archivo)\b', final_cmd, re.IGNORECASE):
                 continue
 
             seen_commands.add(final_cmd)
