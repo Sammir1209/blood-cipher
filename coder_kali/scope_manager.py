@@ -104,6 +104,20 @@ class ScopeManager:
         file_path.write_text(content.strip(), encoding="utf-8")
         return clean_name
 
+    def get_scope_content(self, name: str) -> Optional[str]:
+        """Devuelve el contenido completo de un scope específico por su nombre."""
+        file_path = SCOPES_DIR / f"{name}.md"
+        if file_path.exists():
+            try:
+                return file_path.read_text(encoding="utf-8")
+            except Exception as e:
+                console.print(f"[dim red][!] Error al leer el scope '{name}': {e}[/dim red]")
+        return None
+
+    def get_scope_path(self, name: str) -> Path:
+        """Devuelve la ruta absoluta al archivo .md de un scope."""
+        return SCOPES_DIR / f"{name}.md"
+
     def delete_scope(self, name: str) -> bool:
         """Elimina un documento de scope."""
         file_path = SCOPES_DIR / f"{name}.md"

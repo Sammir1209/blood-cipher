@@ -97,6 +97,7 @@ def interactive_scope_menu(scope_mgr: ScopeManager):
             choices=[
                 questionary.Choice("👁️  Ver contenido del Scope activo", value="VIEW"),
                 questionary.Choice("🔄 Cambiar / Activar un Scope existente", value="SELECT"),
+                questionary.Choice("✏️  Editar un Scope existente", value="EDIT"),
                 questionary.Choice("📥 Importar Scope desde un archivo (.md / .txt)", value="IMPORT"),
                 questionary.Choice("✍️  Crear / Pegar nuevo Scope manualmente", value="CREATE"),
                 questionary.Choice("❌ Desactivar Scope actual (Modo Libre)", value="CLEAR"),
@@ -125,6 +126,49 @@ def interactive_scope_menu(scope_mgr: ScopeManager):
             if chosen_scope:
                 scope_mgr.set_active_scope(chosen_scope)
                 console.print(f"[bold green][✓] Alcance activado:[/bold green] [bold white]{chosen_scope}[/bold white]")
+
+        elif action == "EDIT":
+            scopes = scope_mgr.list_scopes()
+            if not scopes:
+                console.print("[yellow][i] No hay documentos de alcance para editar.[/yellow]")
+                continue
+            choices = [questionary.Choice(f"📄 {s['name']}  [dim]({s['preview']})[/dim]", value=s["name"]) for s in scopes]
+            chosen_scope = questionary.select("Elige el alcance a editar:", choices=choices).ask()
+            if chosen_scope:
+                edit_mode = questionary.select(
+                    f"¿Cómo deseas editar '{chosen_scope}'?",
+                    choices=[
+                        questionary.Choice("📝 Abrir en editor de texto del sistema ($EDITOR / nano / vim / notepad)", value="EDITOR"),
+                        questionary.Choice("✍️  Pegar o escribir nuevo contenido directamente aquí", value="PASTE"),
+                        questionary.Choice("🔙 Cancelar", value="CANCEL"),
+                    ]
+                ).ask()
+
+                if edit_mode == "EDITOR":
+                    target_file = scope_mgr.get_scope_path(chosen_scope)
+                    editor = os.environ.get("EDITOR") or ("nano" if shutil.which("nano") else ("vim" if shutil.which("vim") else ("notepad" if os.name == "nt" else "vi")))
+                    try:
+                        import subprocess
+                        subprocess.run([editor, str(target_file)])
+                        console.print(f"[bold green][✓] Scope '{chosen_scope}' guardado exitosamente desde {editor}.[/bold green]")
+                    except Exception as e:
+                        console.print(f"[bold red][!] Error al abrir el editor {editor}: {e}[/bold red]")
+
+                elif edit_mode == "PASTE":
+                    console.print(f"[cyan][*] Ingresa el nuevo contenido para '{chosen_scope}' (escribe 'FIN' en una línea vacía para guardar):[/cyan]")
+                    lines = []
+                    while True:
+                        try:
+                            line = input()
+                            if line.strip() == "FIN":
+                                break
+                            lines.append(line)
+                        except (KeyboardInterrupt, EOFError):
+                            break
+                    new_content = "\n".join(lines)
+                    if new_content.strip():
+                        scope_mgr.save_scope(chosen_scope, new_content)
+                        console.print(f"[bold green][✓] Scope '{chosen_scope}' actualizado exitosamente.[/bold green]")
 
         elif action == "IMPORT":
             file_path_str = questionary.text("Ingresa la ruta absoluta o relativa al archivo (.md o .txt):").ask()
