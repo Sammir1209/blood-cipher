@@ -290,6 +290,15 @@ class KaliAgent:
                             if len(self.messages) > 3:
                                 self.messages = [self.messages[0], self.messages[-2], self.messages[-1]]
 
+                            # Intentar rotar a otra API key si hay pool configurado
+                            key_count = self.config_mgr.get_api_key_count(provider)
+                            if key_count > 1:
+                                old_idx = self.config_mgr.get_current_key_index(provider)
+                                new_key = self.config_mgr.rotate_api_key(provider)
+                                new_idx = self.config_mgr.get_current_key_index(provider)
+                                console.print(f"[bold cyan][🔄] Key #{old_idx+1} agotada → Rotando a Key #{new_idx+1} de {key_count} disponibles[/bold cyan]")
+                                continue  # Reintentar inmediatamente con la nueva key
+
                             if retry_count < max_retries:
                                 wait_seconds = 12 + (retry_count * 4)
                                 import re
@@ -297,7 +306,7 @@ class KaliAgent:
                                 if match:
                                     wait_seconds = max(int(float(match.group(1))) + 2, 5)
 
-                                console.print(f"[yellow][!] Límite de tasa de tokens (TPM) alcanzado en Groq/API. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
+                                console.print(f"[yellow][!] Límite de tasa (TPM) alcanzado. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
                                 time.sleep(wait_seconds)
                                 continue
                         
@@ -427,6 +436,14 @@ class KaliAgent:
                         err_str = str(e)
                         is_rate_limit = "rate" in err_str.lower() or "429" in err_str or "tpm" in err_str.lower() or "RateLimitError" in err_str
                         if is_rate_limit and synth_attempt < synth_retries - 1:
+                            # Intentar rotar key si hay pool
+                            key_count = self.config_mgr.get_api_key_count(provider)
+                            if key_count > 1:
+                                old_idx = self.config_mgr.get_current_key_index(provider)
+                                self.config_mgr.rotate_api_key(provider)
+                                new_idx = self.config_mgr.get_current_key_index(provider)
+                                console.print(f"[bold cyan][🔄] Síntesis: Key #{old_idx+1} → #{new_idx+1}[/bold cyan]")
+                                continue
                             import re as _re
                             wait = 15 + (synth_attempt * 8)
                             match = _re.search(r'(?:retry in|try again in\s+)(\d+(?:\.\d+)?)s?', err_str, _re.IGNORECASE)

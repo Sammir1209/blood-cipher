@@ -53,7 +53,10 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
     if prov_meta.get("requires_api_key", True):
         current_key = config_mgr.get_api_key(chosen_provider)
+        key_count = config_mgr.get_api_key_count(chosen_provider)
         key_hint = f" (Actual: {'*'*6}...{current_key[-4:]})" if current_key and len(current_key) > 8 else ""
+        if key_count > 1:
+            key_hint += f" [{key_count} keys en pool]"
 
         entered_key = questionary.password(
             f"Ingresa tu API Key para {prov_meta['name']}{key_hint}:"
@@ -67,6 +70,26 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
         if not api_key:
             console.print("[yellow][!] Advertencia: No se proporcionó API Key para este proveedor.[/yellow]")
+
+        # Ofrecer configurar múltiples keys para rotación automática
+        if api_key:
+            add_more = questionary.confirm(
+                f"¿Deseas agregar más API Keys de {prov_meta['name']} para rotación automática? (evita rate limits)",
+                default=False
+            ).ask()
+            if add_more:
+                all_keys = [api_key]
+                console.print("[dim]Pega cada API Key adicional (una por línea). Escribe 'FIN' para terminar:[/dim]")
+                while True:
+                    extra_key = questionary.password("API Key adicional (o 'FIN'):").ask()
+                    if not extra_key or extra_key.strip().upper() == "FIN":
+                        break
+                    if extra_key.strip():
+                        all_keys.append(extra_key.strip())
+                        console.print(f"[green]  ✓ Key #{len(all_keys)} agregada[/green]")
+                if len(all_keys) > 1:
+                    config_mgr.set_api_keys(chosen_provider, all_keys)
+                    console.print(f"[bold green][✓] {len(all_keys)} API Keys configuradas para rotación automática en {prov_meta['name']}[/bold green]")
     else:
         # Proveedor sin API Key (como Ollama)
         current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")

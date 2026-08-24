@@ -324,6 +324,7 @@ class ConfigManager:
         self.save()
 
     def set_api_key(self, provider: str, raw_key: str):
+        """Guardar una sola API key (compatibilidad)."""
         if "api_keys" not in self.config:
             self.config["api_keys"] = {}
         clean_key = raw_key.strip()
@@ -332,6 +333,67 @@ class ConfigManager:
         env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
         if env_var and clean_key:
             os.environ[env_var] = clean_key
+
+    def set_api_keys(self, provider: str, raw_keys: list):
+        """Guardar múltiples API keys para un proveedor (rotación automática)."""
+        if "api_keys_pool" not in self.config:
+            self.config["api_keys_pool"] = {}
+        if "api_key_index" not in self.config:
+            self.config["api_key_index"] = {}
+        encrypted = [self._encrypt(k.strip()) for k in raw_keys if k.strip()]
+        self.config["api_keys_pool"][provider] = encrypted
+        self.config["api_key_index"][provider] = 0
+        # También guardar la primera como key principal (compatibilidad)
+        if encrypted:
+            self.config.setdefault("api_keys", {})[provider] = encrypted[0]
+        self.save()
+        env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
+        if env_var and raw_keys:
+            os.environ[env_var] = raw_keys[0].strip()
+
+    def get_all_api_keys(self, provider: Optional[str] = None) -> list:
+        """Obtener todas las API keys desencriptadas del pool de un proveedor."""
+        prov = provider or self.config.get("provider", "gemini")
+        pool = self.config.get("api_keys_pool", {}).get(prov, [])
+        if pool:
+            return [self._decrypt(k) for k in pool if k]
+        # Fallback: usar la key única como pool de 1
+        single = self.get_api_key(prov)
+        return [single] if single else []
+
+    def get_api_key_count(self, provider: Optional[str] = None) -> int:
+        """Retorna cuántas API keys hay configuradas para un proveedor."""
+        return len(self.get_all_api_keys(provider))
+
+    def rotate_api_key(self, provider: Optional[str] = None) -> str:
+        """Rotar a la siguiente API key disponible. Retorna la nueva key activa."""
+        prov = provider or self.config.get("provider", "gemini")
+        keys = self.get_all_api_keys(prov)
+        if len(keys) <= 1:
+            return keys[0] if keys else ""
+        
+        if "api_key_index" not in self.config:
+            self.config["api_key_index"] = {}
+        
+        current_idx = self.config["api_key_index"].get(prov, 0)
+        new_idx = (current_idx + 1) % len(keys)
+        self.config["api_key_index"][prov] = new_idx
+        
+        new_key = keys[new_idx]
+        # Actualizar la key principal y env var
+        self.config.setdefault("api_keys", {})[prov] = self.config["api_keys_pool"][prov][new_idx]
+        self.save()
+        
+        env_var = DEFAULT_PROVIDERS.get(prov, {}).get("env_var")
+        if env_var and new_key:
+            os.environ[env_var] = new_key.strip()
+        
+        return new_key
+
+    def get_current_key_index(self, provider: Optional[str] = None) -> int:
+        """Retorna el índice de la key actualmente activa."""
+        prov = provider or self.config.get("provider", "gemini")
+        return self.config.get("api_key_index", {}).get(prov, 0)
 
     def get_api_key(self, provider: Optional[str] = None) -> str:
         prov = provider or self.config.get("provider", "gemini")

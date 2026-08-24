@@ -217,7 +217,8 @@ def chat(
     provider = config_mgr.get_active_provider()
     model = config_mgr.get_active_model()
     active_scope_name = scope_mgr.get_active_scope_name()
-    print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name)
+    key_pool_size = config_mgr.get_api_key_count(provider)
+    print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size)
 
     agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=selected_session_id)
 
