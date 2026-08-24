@@ -283,12 +283,11 @@ class KaliAgent:
                             retry_count += 1
                             continue
 
-                        # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/Gemini)
-                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "tpm" in err_str.lower():
+                        # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/Gemini/OpenAI)
+                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "tpm" in err_str.lower() or "Quota exceeded" in err_str:
                             retry_count += 1
 
-                            # Intentar rotar a otra API key si hay pool configurado
-                            # (solo rotar si no hemos agotado un ciclo completo de keys)
+                            # Intentar rotar a otra API key si hay pool configurado (funciona para Groq, Gemini, OpenAI, etc.)
                             key_count = self.config_mgr.get_api_key_count(provider)
                             if not hasattr(self, '_rotation_count'):
                                 self._rotation_count = 0
@@ -297,22 +296,22 @@ class KaliAgent:
                                 self.config_mgr.rotate_api_key(provider)
                                 new_idx = self.config_mgr.get_current_key_index(provider)
                                 self._rotation_count += 1
-                                console.print(f"[bold cyan][🔄] Key #{old_idx+1} agotada → Rotando a Key #{new_idx+1} de {key_count}[/bold cyan]")
-                                continue  # Reintentar inmediatamente con la nueva key
+                                console.print(f"[bold cyan][🔄] {provider.upper()}: Key #{old_idx+1} con límite → Rotando a Key #{new_idx+1} de {key_count}[/bold cyan]")
+                                continue  # Reintentar inmediatamente con la nueva key del pool
 
                             # Todas las keys agotadas o solo hay una: esperar con backoff
                             if key_count > 1:
-                                console.print(f"[yellow][!] Todas las {key_count} keys agotadas. Esperando cooldown...[/yellow]")
+                                console.print(f"[yellow][!] Todas las {key_count} keys de {provider.upper()} agotadas. Esperando cooldown...[/yellow]")
                                 self._rotation_count = 0  # Reset para el siguiente ciclo
 
                             if retry_count < max_retries:
-                                wait_seconds = 12 + (retry_count * 4)
+                                wait_seconds = 15 + (retry_count * 5)
                                 import re
-                                match = re.search(r"(?:retry in|retryDelay[\"':\s]+|try again in\s+)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
+                                match = re.search(r"(?:retry in|retryDelay[\"':\s]+|try again in\s+|retryDelay\":\s*\"?)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
                                 if match:
                                     wait_seconds = max(int(float(match.group(1))) + 2, 5)
 
-                                console.print(f"[yellow][!] Límite de tasa (TPM) alcanzado. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
+                                console.print(f"[yellow][!] Límite de tasa en {provider.upper()}. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
                                 time.sleep(wait_seconds)
                                 continue
                         
