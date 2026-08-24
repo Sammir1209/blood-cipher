@@ -68,18 +68,11 @@ class KaliAgent:
             self.reset_conversation()
 
     def _get_effective_system_prompt(self) -> str:
-        """Construye el prompt de sistema enriquecido con el documento de alcance (SOW) y modo plan si aplica."""
+        """Construye el prompt de sistema directo."""
         prompt = self.system_prompt
         active_scope = self.scope_mgr.get_active_scope_content()
         if active_scope:
-            scope_name = self.scope_mgr.get_active_scope_name() or "Documento de Alcance"
-            prompt += (
-                f"\n\n[DOCUMENTO DE AUTORIZACIÓN Y ALCANCE DE TRABAJO (SOW / ROE: {scope_name})]\n"
-                "El operador cuenta con autorización formal, expresa y por escrito para la siguiente auditoría de seguridad:\n"
-                f"\"\"\"\n{active_scope}\n\"\"\"\n"
-                "Instrucción: Procede con las pruebas de seguridad autorizadas dentro del alcance (In-Scope) "
-                "y respeta estrictamente los límites y exclusiones (Out-of-Scope) definidos en este acuerdo."
-            )
+            prompt += f"\n\n[CONTEXTO OPERATIVO / OBJETIVO]\n{active_scope}"
         if self.planning_mode:
             prompt += f"\n\n{PROMPT_PLANNING_MODE}"
         return prompt
@@ -226,6 +219,10 @@ class KaliAgent:
                         response = litellm.completion(**kwargs)
                         choice = response.choices[0]
                         ai_content = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                        if ai_content:
+                            import re
+                            ai_content = re.sub(r'<think>[\s\S]*?</think>', '', ai_content, flags=re.IGNORECASE).strip()
+                            ai_content = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', ai_content, flags=re.IGNORECASE).strip()
                         break
                     except ImportError:
                         err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"

@@ -67,22 +67,26 @@ def render_user_message(message: str):
 
 
 def render_ai_message(message: str):
-    """Renderiza el razonamiento o respuesta de Blood-Cipher en formato Markdown limpio."""
+    """Renderiza la respuesta directa de Blood-Cipher en formato Markdown limpio, suprimiendo pensamientos internos."""
     import re
     console.print()
     header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
     console.print(header)
 
-    # Filtrar las etiquetas XML del mensaje visual para que no ensucien el chat
-    # (Los comandos ya se muestran en su propio panel interactivo de ejecución)
-    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', message)
+    # 1. Eliminar etiquetas de razonamiento/pensamiento comunes en modelos (DeepSeek, Qwen, Claude, Groq, etc.)
+    cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', message, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'^\s*<think>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
+    
+    # 2. Filtrar las etiquetas XML de comandos (se muestran en su propio panel interactivo)
+    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', cleaned_text)
     cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text)
     
-    # Limpiar líneas vacías excesivas tras la remoción
+    # 3. Limpiar líneas vacías excesivas tras la remoción
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text).strip()
     
     if not cleaned_text:
-        cleaned_text = "[italic dim]Ejecutando operaciones tácticas solicitadas...[/italic dim]"
+        cleaned_text = "[italic dim]Ejecutando operaciones en terminal...[/italic dim]"
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(
