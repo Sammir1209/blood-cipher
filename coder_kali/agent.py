@@ -264,6 +264,12 @@ class KaliAgent:
                                             extracted = extracted[1:-1]
                                         if extracted.endswith('}'):
                                             extracted = extracted[:-1].strip()
+                                        
+                                        # Limpiar bloques <think> o ```thought
+                                        extracted = re.sub(r'<think>[\s\S]*?</think>', '', extracted, flags=re.IGNORECASE).strip()
+                                        extracted = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', extracted, flags=re.IGNORECASE).strip()
+
+                                        # Si el JSON extrajo un comando directo o texto
                                         ai_content = extracted
                                         break
                             except Exception:

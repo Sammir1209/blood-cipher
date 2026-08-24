@@ -70,18 +70,49 @@ class SystemExecutor:
         actions: List[ParsedAction] = []
         seen_commands = set()
 
+        # Limpiar texto de bloques de pensamiento que puedan tener XML falso o comillas abiertas
+        cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE)
+        cleaned_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_text, flags=re.IGNORECASE)
+
         # 1. Buscar comandos en etiquetas XML estándar <ejecutar_comando>
-        for match in COMMAND_REGEX.finditer(text):
-            cmd = match.group(1).strip()
+        for match in COMMAND_REGEX.finditer(cleaned_text):
+            raw_cmd = match.group(1).strip()
+            if not raw_cmd:
+                continue
+
+            # Si el contenido contiene otros bloques XML anidados o markdown sin cerrar, limpiar
+            cmd = re.sub(r'<[^>]+>', '', raw_cmd).strip()
+            # Si el comando empieza con ```bash o ```, limpiar los bloques de código
+            cmd = re.sub(r'^```(?:bash|sh)?\s*', '', cmd, flags=re.MULTILINE)
+            cmd = re.sub(r'\s*```$', '', cmd, flags=re.MULTILINE).strip()
+
+            # Evitar falsos positivos como listas con guiones o texto explicativo
             if not cmd or cmd in seen_commands:
                 continue
-            seen_commands.add(cmd)
-            is_sudo = bool(re.search(r"\bsudo\b", cmd))
-            is_dangerous = any(re.search(pat, cmd) for pat in CRITICAL_PATTERNS)
+            
+            # Si contiene líneas que claramente son explicaciones en texto (ej. "1. Identify Key Requirements:")
+            # filtrar y quedarse solo con las líneas de comandos reales
+            valid_lines = []
+            for line in cmd.splitlines():
+                l_strip = line.strip()
+                if not l_strip:
+                    continue
+                # Si es un bullet point o texto conversacional en inglés/español
+                if re.match(r'^(?:[•\-\*]|\d+\.|\b(?:Note|Step|Fase|Phase|Objective|Analyze|Structure)\b)', l_strip, re.IGNORECASE):
+                    continue
+                valid_lines.append(line)
+
+            final_cmd = "\n".join(valid_lines).strip()
+            if not final_cmd or final_cmd in seen_commands:
+                continue
+
+            seen_commands.add(final_cmd)
+            is_sudo = bool(re.search(r"\bsudo\b", final_cmd))
+            is_dangerous = any(re.search(pat, final_cmd) for pat in CRITICAL_PATTERNS)
             actions.append(
                 ParsedAction(
                     action_type="command",
-                    content=cmd,
+                    content=final_cmd,
                     is_sudo=is_sudo,
                     is_dangerous=is_dangerous,
                 )
