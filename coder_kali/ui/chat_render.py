@@ -79,14 +79,19 @@ def render_ai_message(message: str):
     cleaned_text = re.sub(r'^\s*<think>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
     
     # 2. Filtrar las etiquetas XML de comandos (se muestran en su propio panel interactivo)
+    raw_for_preview = cleaned_text
     cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', cleaned_text)
     cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text)
-    
-    # 3. Limpiar líneas vacías excesivas tras la remoción
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text).strip()
-    
-    if not cleaned_text:
-        cleaned_text = "[italic dim]Ejecutando operaciones en terminal...[/italic dim]"
+
+    # 3. Si no hay texto conversacional pero sí hay comandos, extraer un resumen descriptivo
+    if not cleaned_text.strip():
+        xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', raw_for_preview, flags=re.IGNORECASE)
+        if xml_cmds:
+            cmd_lines = [c.strip().split('\n')[0] for c in xml_cmds if c.strip()]
+            cleaned_text = "⚡ **Iniciando secuencia de ejecución de terminal:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:4]])
+        else:
+            cleaned_text = "[italic dim]Procesando operaciones técnicas...[/italic dim]"
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(
