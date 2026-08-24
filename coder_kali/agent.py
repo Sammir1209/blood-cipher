@@ -102,9 +102,14 @@ class KaliAgent:
         # Filtrar mensajes de conversación (omitir sistema previo si estaba duplicado)
         chat_msgs = [m for m in self.messages if m.get("role") != "system"]
 
-        # En Groq, conservar máximo 6 turnos para no agotar el límite de tokens por minuto (TPM)
-        max_history = 6 if is_groq else 16
-        recent_msgs = chat_msgs[-max_history:] if len(chat_msgs) > max_history else chat_msgs
+        # En Groq, conservar un número adecuado de turnos recientes
+        max_history = 10 if is_groq else 24
+        if len(chat_msgs) > max_history:
+            # Siempre preservar el primer mensaje de la conversación (donde se define el target / objetivo)
+            # más los últimos (max_history - 1) mensajes
+            recent_msgs = [chat_msgs[0]] + chat_msgs[-(max_history - 1):]
+        else:
+            recent_msgs = chat_msgs
 
         api_messages: List[Dict[str, str]] = [system_msg]
         
@@ -116,9 +121,9 @@ class KaliAgent:
             import re
             content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
 
-            # Compactar salidas de terminal para no consumir TPM innecesario
+            # Compactar salidas de terminal intermedias para no consumir TPM innecesario
             is_latest = i == (len(recent_msgs) - 1)
-            max_char_limit = 1500 if is_latest else (500 if is_groq else 1000)
+            max_char_limit = 2000 if is_latest else (800 if is_groq else 1500)
 
             if "[RESULTADOS_SISTEMA" in content or "[SALIDA_COMANDO" in content:
                 if len(content) > max_char_limit:
@@ -277,20 +282,14 @@ class KaliAgent:
                             except Exception:
                                 pass
 
-                        # Si el mensaje es muy largo (Request too large), podar agresivamente y reintentar
+                        # Si el mensaje es muy largo (Request too large)
                         if "request too large" in err_str.lower() or "reduce your message size" in err_str.lower():
-                            console.print("[yellow][!] Historial muy extenso. Compactando contexto automáticamente...[/yellow]")
-                            if len(self.messages) > 2:
-                                self.messages = [self.messages[0], self.messages[-1]]
                             retry_count += 1
                             continue
 
                         # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/Gemini)
                         if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "tpm" in err_str.lower():
                             retry_count += 1
-                            # Compactar el historial de inmediato ante saturación de TPM
-                            if len(self.messages) > 3:
-                                self.messages = [self.messages[0], self.messages[-2], self.messages[-1]]
 
                             # Intentar rotar a otra API key si hay pool configurado
                             # (solo rotar si no hemos agotado un ciclo completo de keys)
