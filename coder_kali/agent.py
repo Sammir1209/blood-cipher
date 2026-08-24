@@ -359,14 +359,12 @@ class KaliAgent:
                 console.print("[yellow][*] Secuencia detenida debido a que el operador rechazó una acción.[/yellow]")
                 break
 
-        # Si el modelo terminó devolviendo únicamente un comando o JSON de herramienta sin explicación,
-        # realizar un turno de síntesis final en lenguaje natural para el operador
-        is_raw_cmd = final_response.strip().startswith('{"cmd"') or final_response.strip().startswith('{"command"') or final_response.strip().startswith('<ejecutar_comando>')
-        has_sufficient_explanation = len(final_response.strip()) > 150 and not is_raw_cmd
-        if (is_raw_cmd or (results_feedback and not has_sufficient_explanation)) and not should_stop:
+        # Turno de análisis e interpretación interactiva de resultados para el operador
+        if results_feedback and not should_stop:
             try:
                 synth_prompt = (
-                    "Presenta tu resumen técnico final y conclusiones breves en español para el operador."
+                    "Interpreta ahora los resultados obtenidos de la terminal de forma detallada e interactiva. "
+                    "Explica al operador qué tecnologías, puertos, cabeceras o hallazgos interesantes descubriste y cuál es el siguiente paso lógico."
                 )
                 self.messages.append({"role": "user", "content": synth_prompt})
                 synth_text = ""
@@ -391,10 +389,14 @@ class KaliAgent:
                     choice = res.choices[0]
                     synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
 
-                if synth_text and not (synth_text.strip().startswith('{"cmd"') or synth_text.strip().startswith('{"command"')):
-                    final_response = synth_text
-                    render_ai_message(synth_text)
-                    self.messages.append({"role": "assistant", "content": synth_text})
+                if synth_text:
+                    import re
+                    synth_text = re.sub(r'<think>[\s\S]*?</think>', '', synth_text, flags=re.IGNORECASE).strip()
+                    synth_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', synth_text, flags=re.IGNORECASE).strip()
+                    if synth_text:
+                        final_response = synth_text
+                        render_ai_message(synth_text)
+                        self.messages.append({"role": "assistant", "content": synth_text})
             except Exception:
                 pass
 
