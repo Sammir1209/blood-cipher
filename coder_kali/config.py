@@ -20,14 +20,13 @@ SECRET_KEY_FILE = CONFIG_DIR / ".secret.key"
 DEFAULT_PROVIDERS = {
     "gemini": {
         "name": "Google Gemini",
-        "default_model": "gemini/gemini-2.0-flash",
+        "default_model": "gemini/gemini-3.6-flash",
         "available_models": [
-            "gemini/gemini-2.0-flash",
-            "gemini/gemini-1.5-flash",
-            "gemini/gemini-1.5-pro",
-            "gemini/gemini-2.0-pro-exp-02-05",
+            "gemini/gemini-3.6-flash",
             "gemini/gemini-2.5-flash",
             "gemini/gemini-2.5-pro",
+            "gemini/gemini-1.5-flash",
+            "gemini/gemini-1.5-pro",
         ],
         "env_var": "GEMINI_API_KEY",
         "requires_api_key": True,
