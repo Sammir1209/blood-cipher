@@ -94,34 +94,46 @@ class KaliAgent:
         """
         Genera una versión optimizada del historial para la API sin destruir
         la memoria persistente de la sesión del usuario.
+        Aplica compactación agresiva cuando el proveedor es Groq para evitar rebasar los límites de TPM.
         """
         effective_sys = self._get_effective_system_prompt()
         if not self.messages:
             return [{"role": "system", "content": effective_sys}]
 
-        # Asegurar que el mensaje de sistema esté al inicio con el scope activo actualizado
+        provider = self.config_mgr.get_active_provider()
+        is_groq = provider == "groq"
+
+        # Mensaje de sistema al inicio
         system_msg = {"role": "system", "content": effective_sys}
         
         # Filtrar mensajes de conversación (omitir sistema previo si estaba duplicado)
         chat_msgs = [m for m in self.messages if m.get("role") != "system"]
 
-        # Conservar hasta los últimos 20 turnos de conversación
-        recent_msgs = chat_msgs[-20:] if len(chat_msgs) > 20 else chat_msgs
+        # En Groq, conservar máximo 6 turnos para no agotar el límite de tokens por minuto (TPM)
+        max_history = 6 if is_groq else 16
+        recent_msgs = chat_msgs[-max_history:] if len(chat_msgs) > max_history else chat_msgs
 
-        # Crear copia para compactar salidas antiguas sin alterar self.messages
         api_messages: List[Dict[str, str]] = [system_msg]
         
         for i, m in enumerate(recent_msgs):
             role = m.get("role", "user")
             content = m.get("content", "")
 
-            # Si es un mensaje antiguo (no los últimos 2) y contiene salida extensa de comando, compactarlo
-            is_recent = i >= (len(recent_msgs) - 2)
-            if not is_recent and "[SALIDA_COMANDO" in content and len(content) > 1000:
-                compacted_content = content[:600] + "\n... [salida de comando previa resumida en contexto] ...\n" + content[-200:]
-                api_messages.append({"role": role, "content": compacted_content})
-            else:
-                api_messages.append({"role": role, "content": content})
+            # Limpiar bloques <think> o reasoning internos que puedan saturar el contexto
+            import re
+            content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
+
+            # Compactar salidas de terminal para no consumir TPM innecesario
+            is_latest = i == (len(recent_msgs) - 1)
+            max_char_limit = 1500 if is_latest else (500 if is_groq else 1000)
+
+            if "[RESULTADOS_SISTEMA" in content or "[SALIDA_COMANDO" in content:
+                if len(content) > max_char_limit:
+                    compacted_content = content[:int(max_char_limit * 0.7)] + "\n... [salida de terminal resumida] ...\n" + content[-int(max_char_limit * 0.3):]
+                    api_messages.append({"role": role, "content": compacted_content})
+                    continue
+
+            api_messages.append({"role": role, "content": content})
 
         return api_messages
 
@@ -138,11 +150,15 @@ class KaliAgent:
         if env_var and api_key:
             os.environ[env_var] = api_key.strip()
 
+        # En Groq limitar max_tokens a un valor prudente (ej. 1024) para no agotar TPM solicitado
+        configured_max = self.config_mgr.get("max_tokens", 1500)
+        max_tokens = min(configured_max, 1024 if provider == "groq" else 2048)
+
         kwargs: Dict[str, Any] = {
             "model": model,
             "messages": self._get_api_messages(),
             "temperature": self.config_mgr.get("temperature", 0.2),
-            "max_tokens": min(self.config_mgr.get("max_tokens", 1500), 2048),
+            "max_tokens": max_tokens,
         }
 
         if api_key:
@@ -175,7 +191,7 @@ class KaliAgent:
 
             # 1. Llamar al modelo con LiteLLM con reintentos automáticos en caso de Rate Limit
             ai_content = ""
-            max_retries = 3
+            max_retries = 5
             retry_count = 0
 
             while retry_count < max_retries:
@@ -265,16 +281,20 @@ class KaliAgent:
                             continue
 
                         # Si es un Rate Limit temporal (común en tiers gratuitos de Groq/Gemini)
-                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        if "RateLimitError" in type(e).__name__ or "rate_limit" in err_str.lower() or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "tpm" in err_str.lower():
                             retry_count += 1
-                            if retry_count < max_retries:
-                                wait_seconds = 15
-                                import re
-                                match = re.search(r"(?:retry in|retryDelay[\"':\s]+)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
-                                if match:
-                                    wait_seconds = int(float(match.group(1))) + 2
+                            # Compactar el historial de inmediato ante saturación de TPM
+                            if len(self.messages) > 3:
+                                self.messages = [self.messages[0], self.messages[-2], self.messages[-1]]
 
-                                console.print(f"[yellow][!] Límite de la API alcanzado. Reintentando automáticamente en {wait_seconds}s ({retry_count}/{max_retries})...[/yellow]")
+                            if retry_count < max_retries:
+                                wait_seconds = 12 + (retry_count * 4)
+                                import re
+                                match = re.search(r"(?:retry in|retryDelay[\"':\s]+|try again in\s+)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
+                                if match:
+                                    wait_seconds = max(int(float(match.group(1))) + 2, 5)
+
+                                console.print(f"[yellow][!] Límite de tasa de tokens (TPM) alcanzado en Groq/API. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
                                 time.sleep(wait_seconds)
                                 continue
                         
@@ -339,11 +359,11 @@ class KaliAgent:
         # Si el modelo terminó devolviendo únicamente un comando o JSON de herramienta sin explicación,
         # realizar un turno de síntesis final en lenguaje natural para el operador
         is_raw_cmd = final_response.strip().startswith('{"cmd"') or final_response.strip().startswith('{"command"') or final_response.strip().startswith('<ejecutar_comando>')
-        if (is_raw_cmd or results_feedback) and not should_stop:
+        has_sufficient_explanation = len(final_response.strip()) > 150 and not is_raw_cmd
+        if (is_raw_cmd or (results_feedback and not has_sufficient_explanation)) and not should_stop:
             try:
                 synth_prompt = (
-                    "Presenta ahora tu análisis técnico completo, Ficha 360° y conclusiones en español para el operador "
-                    "basándote en toda la información recopilada del objetivo."
+                    "Presenta tu resumen técnico final y conclusiones breves en español para el operador."
                 )
                 self.messages.append({"role": "user", "content": synth_prompt})
                 synth_text = ""

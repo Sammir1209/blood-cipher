@@ -73,13 +73,15 @@ DEFAULT_PROVIDERS = {
     },
     "groq": {
         "name": "Groq (Inferencia Ultra Rápida)",
-        "default_model": "groq/qwen/qwen3.6-27b",
+        "default_model": "groq/llama-3.3-70b-versatile",
         "available_models": [
+            "groq/llama-3.3-70b-versatile",
+            "groq/llama-3.1-8b-instant",
             "groq/qwen/qwen3.6-27b",
+            "groq/mixtral-8x7b-32768",
+            "groq/gemma2-9b-it",
             "groq/openai/gpt-oss-120b",
             "groq/openai/gpt-oss-20b",
-            "groq/groq/compound",
-            "groq/groq/compound-mini",
         ],
         "env_var": "GROQ_API_KEY",
         "requires_api_key": True,
