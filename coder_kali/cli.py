@@ -225,8 +225,14 @@ def chat(
         user_msgs = [m for m in agent.messages if m.get("role") == "user" and not m.get("content", "").startswith("[RESULTADOS_SISTEMA")]
         console.print(f"[bold green][✓] Sesión reanudada:[/bold green] [bold white]'{agent.current_session.title}'[/bold white] [dim]({len(user_msgs)} turnos en memoria táctica)[/dim]\n")
         
-        # Renderizar los últimos 4 mensajes para contexto visual inmediato
-        visible_msgs = [m for m in agent.messages if m.get("role") in ["user", "assistant"] and not m.get("content", "").startswith("[RESULTADOS_SISTEMA")][-4:]
+        # Renderizar los últimos mensajes visibles para contexto visual inmediato
+        # Filtrar mensajes internos del sistema (feedback de terminal, prompts de síntesis, etc.)
+        _internal_prefixes = ("[RESULTADOS_SISTEMA", "Interpreta los resultados", "Interpreta ahora", "Analiza estos resultados", "Presenta tu resumen")
+        visible_msgs = [
+            m for m in agent.messages 
+            if m.get("role") in ["user", "assistant"] 
+            and not any(m.get("content", "").startswith(p) for p in _internal_prefixes)
+        ][-4:]
         for msg in visible_msgs:
             if msg.get("role") == "user":
                 render_user_message(msg.get("content", "").split("\n\n[REFERENCIA")[0])

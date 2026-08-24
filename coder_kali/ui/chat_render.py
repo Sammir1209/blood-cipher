@@ -69,9 +69,6 @@ def render_user_message(message: str):
 def render_ai_message(message: str):
     """Renderiza la respuesta directa de Blood-Cipher en formato Markdown limpio, suprimiendo pensamientos internos."""
     import re
-    console.print()
-    header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
-    console.print(header)
 
     # 1. Eliminar etiquetas de razonamiento/pensamiento comunes en modelos (DeepSeek, Qwen, Claude, Groq, etc.)
     cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', message, flags=re.IGNORECASE)
@@ -94,8 +91,13 @@ def render_ai_message(message: str):
             cmd_lines = [c.strip().split('\n')[0] for c in xml_cmds if c.strip()]
             cleaned_text = "⚡ **Iniciando secuencia de ejecución:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:6]])
         else:
-            # No hay ni texto ni comandos - no renderizar panel vacío
+            # No hay ni texto ni comandos - no renderizar nada
             return
+
+    # 4. Solo imprimir header y panel cuando hay contenido real
+    console.print()
+    header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
+    console.print(header)
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(

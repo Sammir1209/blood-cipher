@@ -307,13 +307,26 @@ class KaliAgent:
             if not ai_content:
                 return "No se pudo obtener respuesta del modelo debido a límites de la API."
 
-            # 2. Renderizar la respuesta del modelo
-            render_ai_message(ai_content)
-            self.messages.append({"role": "assistant", "content": ai_content})
-            final_response = ai_content
+            # 2. Limpiar think tags antes de procesar
+            import re
+            clean_content = re.sub(r'<think>[\s\S]*?</think>', '', ai_content, flags=re.IGNORECASE).strip()
+            clean_content = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', clean_content, flags=re.IGNORECASE).strip()
+            clean_content = re.sub(r'^\s*<think>[\s\S]*$', '', clean_content, flags=re.IGNORECASE).strip()
 
-            # 3. Detectar si hay acciones XML
+            # 3. Detectar si hay acciones XML (buscar en el contenido original por si están dentro de think)
             actions = self.executor.parse_actions(ai_content)
+            if not actions:
+                actions = self.executor.parse_actions(clean_content)
+
+            # 4. Renderizar la respuesta del modelo (si hay contenido visible o comandos)
+            if clean_content or actions:
+                render_ai_message(ai_content)
+                self.messages.append({"role": "assistant", "content": ai_content})
+                final_response = ai_content
+            else:
+                # Modelo solo generó think tags sin contenido útil - no guardar ni renderizar
+                break
+
             if not actions:
                 # No hay comandos ni archivos pendientes por ejecutar, fin del ciclo de razonamiento
                 break
