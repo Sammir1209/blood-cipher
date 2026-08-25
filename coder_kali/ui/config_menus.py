@@ -90,6 +90,19 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
                 if len(all_keys) > 1:
                     config_mgr.set_api_keys(chosen_provider, all_keys)
                     console.print(f"[bold green][✓] {len(all_keys)} API Keys configuradas para rotación automática en {prov_meta['name']}[/bold green]")
+        if "default_api_base" in prov_meta:
+            current_base = config_mgr.get_api_base(chosen_provider) or prov_meta["default_api_base"]
+            api_base_input = questionary.text(
+                f"Endpoint URL (Base) para {prov_meta['name']}:",
+                default=current_base,
+            ).ask()
+            if api_base_input:
+                api_base = api_base_input.strip()
+                if "api_bases" not in config_mgr.config:
+                    config_mgr.config["api_bases"] = {}
+                config_mgr.config["api_bases"][chosen_provider] = api_base
+        else:
+            api_base = config_mgr.get_api_base(chosen_provider)
     else:
         # Proveedor sin API Key (como Ollama)
         current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")

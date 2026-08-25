@@ -198,6 +198,19 @@ DEFAULT_PROVIDERS = {
         "requires_api_key": False,
         "default_api_base": "http://localhost:11434",
     },
+    "bai": {
+        "name": "Bai Chat (chat.b.ai API)",
+        "default_model": "openai/deepseek-r1",
+        "available_models": [
+            "openai/deepseek-r1",
+            "openai/deepseek-v3",
+            "openai/gpt-4o",
+            "openai/claude-3-5-sonnet",
+        ],
+        "env_var": "BAI_API_KEY",
+        "requires_api_key": True,
+        "default_api_base": "https://api.b.ai/v1",
+    },
     "openrouter": {
         "name": "OpenRouter (Acceso Universal a 200+ Modelos)",
         "default_model": "openrouter/deepseek/deepseek-r1:free",
