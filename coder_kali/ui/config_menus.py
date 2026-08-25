@@ -198,7 +198,15 @@ def test_provider_connection(config_mgr: ConfigManager) -> bool:
                 "max_tokens": 50,
             }
             if api_key:
-                kwargs["api_key"] = api_key.strip()
+                clean_k = api_key.strip()
+                kwargs["api_key"] = clean_k
+                if provider == "openrouter":
+                    os.environ["OPENROUTER_API_KEY"] = clean_k
+                    os.environ["OR_API_KEY"] = clean_k
+                    kwargs["extra_headers"] = {
+                        "HTTP-Referer": "https://github.com/Sammir1209/coder-kali",
+                        "X-Title": "Blood-Cipher",
+                    }
             if api_base:
                 kwargs["api_base"] = api_base
 
