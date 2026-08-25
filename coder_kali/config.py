@@ -200,12 +200,15 @@ DEFAULT_PROVIDERS = {
     },
     "bai": {
         "name": "Bai Chat (chat.b.ai API)",
-        "default_model": "openai/deepseek-r1",
+        "default_model": "openai/gpt-5.2",
         "available_models": [
-            "openai/deepseek-r1",
-            "openai/deepseek-v3",
+            "openai/gpt-5.2",
             "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "openai/chatgpt-4o-latest",
             "openai/claude-3-5-sonnet",
+            "openai/deepseek-chat",
+            "openai/deepseek-reasoner",
         ],
         "env_var": "BAI_API_KEY",
         "requires_api_key": True,
