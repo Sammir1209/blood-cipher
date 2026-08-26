@@ -56,29 +56,30 @@ def print_banner(version: str = "1.5.0", provider: str = "gemini", model: str = 
 
 
 def render_user_message(message: str):
-    """Renderiza el mensaje del operador."""
+    """Renderiza el mensaje del operador con estilo táctico cyberpunk."""
     console.print()
-    header = Text(" 👤 OPERADOR ", style="bold black on bright_green")
-    console.print(header)
+    from rich.columns import Columns
+    badge = Text(" ⚡ OPERADOR ", style="bold black on bright_green")
+    console.print(badge)
     panel = Panel(
-        Text(message, style="white"),
-        border_style="green",
+        Text(message, style="bold white"),
+        border_style="bright_green",
         box=ROUNDED,
-        padding=(0, 1),
+        padding=(0, 2),
     )
     console.print(panel)
 
 
 def render_ai_message(message: str):
-    """Renderiza la respuesta directa de Blood-Cipher en formato Markdown limpio, suprimiendo pensamientos internos."""
+    """Renderiza la respuesta directa de Blood-Cipher en formato Markdown de élite."""
     import re
 
-    # 1. Eliminar etiquetas de razonamiento/pensamiento comunes en modelos (DeepSeek, Qwen, Claude, Groq, etc.)
+    # 1. Eliminar etiquetas de razonamiento/pensamiento
     cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', message, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'^\s*<think>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
     
-    # 2. Filtrar las etiquetas XML de comandos (se muestran en su propio panel interactivo)
+    # 2. Filtrar las etiquetas XML de comandos
     raw_for_preview = cleaned_text
     cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', cleaned_text)
     cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text)
@@ -86,20 +87,17 @@ def render_ai_message(message: str):
 
     # 3. Si no hay texto conversacional pero sí hay comandos, extraer un resumen descriptivo
     if not cleaned_text.strip():
-        # Buscar comandos XML en el texto pre-limpieza y también en el mensaje original (por si estaban dentro de <think>)
         xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', raw_for_preview, flags=re.IGNORECASE)
         if not xml_cmds:
             xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', message, flags=re.IGNORECASE)
         if xml_cmds:
             cmd_lines = [c.strip().split('\n')[0] for c in xml_cmds if c.strip()]
-            cleaned_text = "⚡ **Iniciando secuencia de ejecución:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:6]])
+            cleaned_text = "⚡ **Ejecutando operaciones tácticas:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:6]])
         else:
-            # No hay ni texto ni comandos - no renderizar nada
             return
 
-    # 4. Solo imprimir header y panel cuando hay contenido real
     console.print()
-    header = Text(" 🤖 BLOOD-CIPHER ", style="bold black on bright_cyan")
+    header = Text(" 🤖 BLOOD-CIPHER TACTICAL AI ", style="bold black on bright_cyan")
     console.print(header)
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
@@ -118,7 +116,7 @@ def render_execution_result(result, command: Optional[str] = None):
     if result.was_rejected:
         panel = Panel(
             Text(result.output, style="bold red"),
-            title="[bold red]⛔ ACCIÓN CANCELADA[/bold red]",
+            title="[bold red]⛔ ACCIÓN CANCELADA POR EL OPERADOR[/bold red]",
             border_style="red",
             box=ROUNDED,
         )
@@ -126,47 +124,47 @@ def render_execution_result(result, command: Optional[str] = None):
         return
 
     if result.is_file_op:
-        title = f"[bold green]✓ ARCHIVO GENERADO: {result.target_path}[/bold green]" if result.success else f"[bold red]✗ ERROR EN ARCHIVO: {result.target_path}[/bold red]"
+        title = f"[bold bright_green]✓ SCRIPT GENERADO CON ÉXITO: {result.target_path}[/bold bright_green]" if result.success else f"[bold red]✗ ERROR EN ARCHIVO: {result.target_path}[/bold red]"
         border_color = "bright_green" if result.success else "bright_red"
         panel = Panel(
             Text(result.output, style="white"),
             title=title,
             border_style=border_color,
             box=ROUNDED,
+            padding=(0, 2),
         )
         console.print(panel)
         return
 
     # Para comandos de terminal
-    title = f"[bold green]✓ SALIDA DEL SISTEMA (Código {result.returncode})[/bold green]" if result.success else f"[bold red]✗ ERROR DE EJECUCIÓN (Código {result.returncode})[/bold red]"
+    title = f"[bold bright_green]✓ SALIDA TÁCTICA DE SISTEMA (Código {result.returncode})[/bold bright_green]" if result.success else f"[bold bright_red]✗ ERROR DE EJECUCIÓN (Código {result.returncode})[/bold bright_red]"
     border_color = "bright_green" if result.success else "bright_red"
 
-    # Si la salida es muy larga o tiene líneas minificadas gigantes, darle formato limpio y seguro
     output_text = result.output
     lines = output_text.splitlines()
 
-    # Si hay líneas larguísimas (ej. JS minificado), truncar las líneas individuales
     safe_lines = []
-    for l in lines[:60]:
-        if len(l) > 300:
-            safe_lines.append(l[:297] + "...")
+    for l in lines[:70]:
+        if len(l) > 350:
+            safe_lines.append(l[:347] + "...")
         else:
             safe_lines.append(l)
 
-    if len(lines) > 50:
-        preview = "\n".join(safe_lines[:30]) + f"\n\n... [{len(lines) - 40} líneas omitidas para agilizar visualización] ...\n\n" + "\n".join([l[:300] for l in lines[-10:]])
+    if len(lines) > 60:
+        preview = "\n".join(safe_lines[:40]) + f"\n\n[dim cyan]... [{len(lines) - 50} líneas intermedias omitidas] ...[/dim cyan]\n\n" + "\n".join([l[:350] for l in lines[-10:]])
         display_content = preview
-    elif len(output_text) > 5000:
-        display_content = "\n".join(safe_lines[:30]) + f"\n\n... [Salida extensa: {len(output_text)} caracteres] ...\n"
+    elif len(output_text) > 6000:
+        display_content = "\n".join(safe_lines[:40]) + f"\n\n[dim cyan]... [Salida extensa: {len(output_text)} caracteres] ...[/dim cyan]\n"
     else:
         display_content = "\n".join(safe_lines)
 
     panel = Panel(
-        Text(display_content, style="white on black" if not result.success else "white"),
+        Text(display_content, style="white"),
         title=title,
         border_style=border_color,
         box=ROUNDED,
-        subtitle=f"[dim cyan]{command or ''}[/dim cyan]",
+        padding=(0, 2),
+        subtitle=f"[bold yellow]$ {command or ''}[/bold yellow]",
     )
     console.print(panel)
 
@@ -177,7 +175,7 @@ def render_error(title: str, details: str):
     content = f"[bold red]{title}[/bold red]\n\n[white]{details}[/white]"
     panel = Panel(
         content,
-        title="[bold red]🚨 ERROR DEL SISTEMA[/bold red]",
+        title="[bold red]🚨 ALERTA DEL SISTEMA[/bold red]",
         border_style="bright_red",
         box=HEAVY,
         padding=(1, 2),
