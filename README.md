@@ -3,10 +3,10 @@
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-v1.5.0-red.svg?style=for-the-badge)](https://github.com/Sammir1209/blood-cipher)
+[![Version](https://img.shields.io/badge/Version-v2.0.0-red.svg?style=for-the-badge)](https://github.com/Sammir1209/blood-cipher)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20BlackArch%20%7C%20Arch%20%7C%20Debian%20%7C%20Ubuntu-557C94.svg?style=for-the-badge&logo=linux&logoColor=white)](https://www.kali.org/)
-[![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
+[![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Bai%20Chat%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
 [![Web UI](https://img.shields.io/badge/Interface-CLI%20%2B%20Web%20Dashboard%20(Port%207777)-00FF9D.svg?style=for-the-badge)](http://localhost:7777)
 
 <p align="center">
@@ -20,7 +20,7 @@
   ██╔══██╗██║     ██║   ██║██║   ██║██║  ██║     ██║     ██║██╔═══╝ ██╔══██║██╔══╝  ██╔══██╗
   ██████╔╝███████╗╚██████╔╝╚██████╔╝██████╔╝     ╚██████╗██║██║     ██║  ██║███████╗██║  ██║
   ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝       ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-          [ NÚCLEO TÁCTICO PARA HACKTIVISMO, OSINT & AUDITORÍA LIBRE // v1.5 ]
+          [ NÚCLEO TÁCTICO PARA HACKTIVISMO, OSINT & AUDITORÍA LIBRE // v2.0 ]
 ```
 
 </div>
@@ -29,7 +29,7 @@
 
 ## [01] Visión General
 
-**Blood-Cipher v1.5** es una plataforma táctica impulsada por IA diseñada para la **comunidad hacktivista, investigadores de ciberinteligencia independiente (OSINT), auditores de infraestructura y defensores de la soberanía digital**. Combina la potencia de modelos de lenguaje de última generación (**Google Gemini, Claude 3.5 Sonnet, OpenAI o1/GPT-4o, DeepSeek R1, Groq y Ollama 100% Offline**) con el arsenal técnico de **Kali Linux, BlackArch, Arch Linux, Debian y Ubuntu**.
+**Blood-Cipher v2.0** es una plataforma táctica impulsada por IA diseñada para la **comunidad hacktivista, investigadores de ciberinteligencia independiente (OSINT), auditores de infraestructura y defensores de la soberanía digital**. Combina la potencia de modelos de lenguaje de última generación (**Google Gemini, Claude 3.5 Sonnet, OpenAI o1/GPT-4o, DeepSeek R1/V3, Bai Chat, Groq y Ollama 100% Offline**) con el arsenal técnico de **Kali Linux, BlackArch, Arch Linux, Debian y Ubuntu**.
 
 Ofrece un centro de mando unificado para operaciones tácticas:
 - **Terminal Táctico (CLI):** Control interactivo PTY, análisis de credenciales y subcomandos de red (`blood-cipher`).
@@ -163,12 +163,33 @@ Esta herramienta está destinada **exclusivamente para auditorías de seguridad 
 
 ---
 
-## [08] Licencia
-
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
-
+## [08] Registro de Actualizaciones (Changelog v2.0.0)
+ 
+### 🚀 Versión 2.0.0 — *26 de Agosto, 2026*
+ 
+- **🧠 Razonamiento Estratégico y Planificación a Futuro (Forward Planning):**
+  - La IA analiza los objetivos con visión táctica en cadenas completas (Fase 1 Reconocimiento $\rightarrow$ Fase 2 Vulnerabilidades $\rightarrow$ Fase 3 Auditoría profunda).
+  - Eliminación de micro-preguntas redundantes: formulación autónoma y limpia de planes ejecutables por lotes.
+- **🛡️ Modo Libre y Cero Rechazos (Zero-Refusal Core):**
+  - Autorización plena implícita para pruebas de penetración, inyecciones SQL, escaneo de puertos y reversing sin necesidad obligatoria de Scope.
+- **💻 Motor de Scripting Limpio y Anti-Errores de Sintaxis:**
+  - Prohibición de one-liners y bucles inline en Bash que rompían comillas y paréntesis.
+  - Creación automática de scripts estructurados en `/tmp/` con manejo de excepciones, timeouts y tipado en Python 3, Bash y PHP.
+- **🌐 Soporte Nativo para Nuevos Proveedores:**
+  - Integración nativa de **Bai Chat (`chat.b.ai`)**, modelos OpenRouter gratuitos y descubrimiento dinámico de modelos en vivo.
+- **🎮 Flujo de Terminal Táctico e Interactividad TUI:**
+  - Nuevos comandos en vivo dentro del chat: `inicio` / `menu`, `scope`, `model` / `config`, `clear` y `historial`.
+  - Captura suave de `Ctrl + C` para cancelar acciones y regresar al menú o prompt anterior sin cerrar el programa.
+  - Badges visuales de alta fidelidad (`⚡ OPERADOR`, `🤖 BLOOD-CIPHER TACTICAL AI`), paneles con bordes redondeados y filtros de salidas masivas.
+ 
 ---
-
+ 
+## [09] Licencia
+ 
+Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+ 
+---
+ 
 <div align="center">
   <sub>Desarrollado para la comunidad hacktivista, investigadores independientes y defensores de la soberanía digital. Creado para la libertad de información y el análisis técnico de infraestructura.</sub>
-</div>
+ </div>

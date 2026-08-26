@@ -2,7 +2,7 @@
 Blood-Cipher - Agente de Inteligencia Artificial para Ciberseguridad, Hacking Ético y Auditorías en Linux.
 """
 
-__version__ = "1.5.0"
+__version__ = "2.0.0"
 __author__ = "Blood-Cipher Team"
 
 from coder_kali.agent import KaliAgent

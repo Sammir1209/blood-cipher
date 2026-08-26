@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="blood-cipher",
-    version="1.5.0",
+    version="2.0.0",
     author="CODER",
     author_email="blood-chipher@root.com",
     description="Blood-Cipher - Agente de IA de élite para ciberseguridad, hacking ético y auditorías en Linux (Kali, BlackArch, Arch, Debian).",
