@@ -31,18 +31,23 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
         )
         for prov, info in DEFAULT_PROVIDERS.items()
     ]
+    provider_choices.append(questionary.Choice(title="🔙 Regresar / Cancelar", value="BACK"))
 
     current_provider = config_mgr.get_active_provider()
     default_choice = next((c for c in provider_choices if c.value == current_provider), provider_choices[0])
 
-    chosen_provider = questionary.select(
-        "Elige tu proveedor de Inteligencia Artificial:",
-        choices=provider_choices,
-        default=default_choice,
-    ).ask()
+    try:
+        chosen_provider = questionary.select(
+            "Elige tu proveedor de Inteligencia Artificial:",
+            choices=provider_choices,
+            default=default_choice,
+        ).ask()
+    except (KeyboardInterrupt, EOFError):
+        console.print("[yellow]\n[*] Configuración cancelada. Regresando...[/yellow]")
+        return False
 
-    if not chosen_provider:
-        console.print("[yellow][*] Configuración cancelada.[/yellow]")
+    if not chosen_provider or chosen_provider == "BACK":
+        console.print("[yellow][*] Regresando al menú anterior.[/yellow]")
         return False
 
     prov_meta = DEFAULT_PROVIDERS[chosen_provider]
@@ -51,118 +56,135 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
     api_key = ""
     api_base = None
 
-    if prov_meta.get("requires_api_key", True):
-        current_key = config_mgr.get_api_key(chosen_provider)
-        key_count = config_mgr.get_api_key_count(chosen_provider)
-        key_hint = f" (Actual: {'*'*6}...{current_key[-4:]})" if current_key and len(current_key) > 8 else ""
-        if key_count > 1:
-            key_hint += f" [{key_count} keys en pool]"
+    try:
+        if prov_meta.get("requires_api_key", True):
+            current_key = config_mgr.get_api_key(chosen_provider)
+            key_count = config_mgr.get_api_key_count(chosen_provider)
+            key_hint = f" (Actual: {'*'*6}...{current_key[-4:]})" if current_key and len(current_key) > 8 else ""
+            if key_count > 1:
+                key_hint += f" [{key_count} keys en pool]"
 
-        entered_key = questionary.password(
-            f"Ingresa tu API Key para {prov_meta['name']}{key_hint}:"
-        ).ask()
-
-        if entered_key and entered_key.strip():
-            api_key = entered_key.strip()
-            config_mgr.set_api_key(chosen_provider, api_key)
-        else:
-            api_key = current_key or ""
-
-        if not api_key:
-            console.print("[yellow][!] Advertencia: No se proporcionó API Key para este proveedor.[/yellow]")
-
-        # Ofrecer configurar múltiples keys para rotación automática
-        if api_key:
-            add_more = questionary.confirm(
-                f"¿Deseas agregar más API Keys de {prov_meta['name']} para rotación automática? (evita rate limits)",
-                default=False
+            entered_key = questionary.password(
+                f"Ingresa tu API Key para {prov_meta['name']}{key_hint} (o presiona Enter para conservar):"
             ).ask()
-            if add_more:
-                all_keys = [api_key]
-                console.print("[dim]Pega cada API Key adicional (una por línea). Escribe 'FIN' para terminar:[/dim]")
-                while True:
-                    extra_key = questionary.password("API Key adicional (o 'FIN'):").ask()
-                    if not extra_key or extra_key.strip().upper() == "FIN":
-                        break
-                    if extra_key.strip():
-                        all_keys.append(extra_key.strip())
-                        console.print(f"[green]  ✓ Key #{len(all_keys)} agregada[/green]")
-                if len(all_keys) > 1:
-                    config_mgr.set_api_keys(chosen_provider, all_keys)
-                    console.print(f"[bold green][✓] {len(all_keys)} API Keys configuradas para rotación automática en {prov_meta['name']}[/bold green]")
-        if "default_api_base" in prov_meta:
-            current_base = config_mgr.get_api_base(chosen_provider) or prov_meta["default_api_base"]
+
+            if entered_key is None:
+                console.print("[yellow]\n[*] Operación cancelada. Regresando...[/yellow]")
+                return False
+
+            if entered_key and entered_key.strip():
+                api_key = entered_key.strip()
+                config_mgr.set_api_key(chosen_provider, api_key)
+            else:
+                api_key = current_key or ""
+
+            if not api_key:
+                console.print("[yellow][!] Advertencia: No se proporcionó API Key para este proveedor.[/yellow]")
+
+            # Ofrecer configurar múltiples keys para rotación automática
+            if api_key:
+                add_more = questionary.confirm(
+                    f"¿Deseas agregar más API Keys de {prov_meta['name']} para rotación automática? (evita rate limits)",
+                    default=False
+                ).ask()
+                if add_more:
+                    all_keys = [api_key]
+                    console.print("[dim]Pega cada API Key adicional (una por línea). Escribe 'FIN' para terminar:[/dim]")
+                    while True:
+                        extra_key = questionary.password("API Key adicional (o 'FIN'):").ask()
+                        if not extra_key or extra_key.strip().upper() == "FIN":
+                            break
+                        if extra_key.strip():
+                            all_keys.append(extra_key.strip())
+                            console.print(f"[green]  ✓ Key #{len(all_keys)} agregada[/green]")
+                    if len(all_keys) > 1:
+                        config_mgr.set_api_keys(chosen_provider, all_keys)
+                        console.print(f"[bold green][✓] {len(all_keys)} API Keys configuradas para rotación automática en {prov_meta['name']}[/bold green]")
+            if "default_api_base" in prov_meta:
+                current_base = config_mgr.get_api_base(chosen_provider) or prov_meta["default_api_base"]
+                api_base_input = questionary.text(
+                    f"Endpoint URL (Base) para {prov_meta['name']}:",
+                    default=current_base,
+                ).ask()
+                if api_base_input is None:
+                    return False
+                if api_base_input:
+                    api_base = api_base_input.strip()
+                    if "api_bases" not in config_mgr.config:
+                        config_mgr.config["api_bases"] = {}
+                    config_mgr.config["api_bases"][chosen_provider] = api_base
+            else:
+                api_base = config_mgr.get_api_base(chosen_provider)
+        else:
+            # Proveedor sin API Key (como Ollama)
+            current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")
             api_base_input = questionary.text(
-                f"Endpoint URL (Base) para {prov_meta['name']}:",
+                f"Endpoint URL de {prov_meta['name']}:",
                 default=current_base,
             ).ask()
+            if api_base_input is None:
+                return False
             if api_base_input:
-                api_base = api_base_input.strip()
                 if "api_bases" not in config_mgr.config:
                     config_mgr.config["api_bases"] = {}
-                config_mgr.config["api_bases"][chosen_provider] = api_base
+                config_mgr.config["api_bases"][chosen_provider] = api_base_input.strip()
+                api_base = api_base_input.strip()
+
+        # 3. Consultar modelos activos en vivo desde la API del proveedor
+        live_models = []
+        with console.status(f"[bold cyan]Consultando modelos activos en tiempo real para {prov_meta['name']}...[/bold cyan]", spinner="dots"):
+            live_models = fetch_live_models(chosen_provider, api_key=api_key, api_base=api_base)
+
+        if live_models:
+            console.print(f"[bold green][✓] Se detectaron {len(live_models)} modelos activos disponibles en tu cuenta.[/bold green]")
+            model_choices = list(live_models)
         else:
-            api_base = config_mgr.get_api_base(chosen_provider)
-    else:
-        # Proveedor sin API Key (como Ollama)
-        current_base = config_mgr.get_api_base(chosen_provider) or prov_meta.get("default_api_base", "http://localhost:11434")
-        api_base = questionary.text(
-            f"Endpoint URL de {prov_meta['name']}:",
-            default=current_base,
+            # Fallback a la lista curada si no fue posible consultar en vivo
+            model_choices = list(prov_meta.get("available_models", []))
+
+        model_choices.append("Personalizado (Escribir manualmente)")
+        model_choices.append("🔙 Cancelar y Regresar")
+
+        current_model = config_mgr.get_active_model()
+        default_model = current_model if current_model in model_choices else model_choices[0]
+
+        # 4. Selección del modelo activo
+        chosen_model = questionary.select(
+            f"Elige el modelo para {prov_meta['name']}:",
+            choices=model_choices,
+            default=default_model,
         ).ask()
-        if api_base:
-            if "api_bases" not in config_mgr.config:
-                config_mgr.config["api_bases"] = {}
-            config_mgr.config["api_bases"][chosen_provider] = api_base.strip()
 
-    # 3. Consultar modelos activos en vivo desde la API del proveedor
-    live_models = []
-    with console.status(f"[bold cyan]Consultando modelos activos en tiempo real para {prov_meta['name']}...[/bold cyan]", spinner="dots"):
-        live_models = fetch_live_models(chosen_provider, api_key=api_key, api_base=api_base)
+        if not chosen_model or chosen_model.startswith("🔙"):
+            console.print("[yellow][*] Selección de modelo cancelada. Regresando...[/yellow]")
+            return False
 
-    if live_models:
-        console.print(f"[bold green][✓] Se detectaron {len(live_models)} modelos activos disponibles en tu cuenta.[/bold green]")
-        model_choices = list(live_models)
-    else:
-        # Fallback a la lista curada si no fue posible consultar en vivo
-        model_choices = list(prov_meta.get("available_models", []))
+        if chosen_model.startswith("Personalizado"):
+            custom_model = questionary.text(
+                "Ingresa el identificador exacto del modelo (ej. groq/qwen/qwen3.6-27b, gemini/gemini-2.5-flash):",
+                default=prov_meta["default_model"],
+            ).ask()
+            if custom_model:
+                chosen_model = custom_model.strip()
+            else:
+                chosen_model = prov_meta["default_model"]
 
-    model_choices.append("Personalizado (Escribir manualmente)")
+        # Guardar proveedor y modelo
+        config_mgr.set_provider(chosen_provider, chosen_model)
 
-    current_model = config_mgr.get_active_model()
-    default_model = current_model if current_model in model_choices else model_choices[0]
+        console.print()
+        console.print("[bold green][✓] ¡Configuración guardada correctamente en ~/.config/blood-cipher/config.json![/bold green]")
+        console.print(f"[cyan]Proveedor activo:[/cyan] {chosen_provider.upper()} | [yellow]Modelo:[/yellow] {chosen_model}")
 
-    # 4. Selección del modelo activo
-    chosen_model = questionary.select(
-        f"Elige el modelo para {prov_meta['name']}:",
-        choices=model_choices,
-        default=default_model,
-    ).ask()
+        # Probar conexión opcionalmente
+        test_now = questionary.confirm("¿Deseas realizar un test de conexión ahora?", default=True).ask()
+        if test_now:
+            test_provider_connection(config_mgr)
 
-    if not chosen_model:
+        return True
+    except (KeyboardInterrupt, EOFError):
+        console.print("[yellow]\n[*] Configuración interrumpida. Regresando al menú principal...[/yellow]")
         return False
-
-    if chosen_model.startswith("Personalizado"):
-        custom_model = questionary.text(
-            "Ingresa el identificador exacto del modelo (ej. groq/qwen/qwen3.6-27b, gemini/gemini-2.5-flash):",
-            default=prov_meta["default_model"],
-        ).ask()
-        if custom_model:
-            chosen_model = custom_model.strip()
-        else:
-            chosen_model = prov_meta["default_model"]
-
-    # Guardar proveedor y modelo
-    config_mgr.set_provider(chosen_provider, chosen_model)
-
-    console.print()
-    console.print("[bold green][✓] ¡Configuración guardada correctamente en ~/.config/blood-cipher/config.json![/bold green]")
-    console.print(f"[cyan]Proveedor activo:[/cyan] {chosen_provider.upper()} | [yellow]Modelo:[/yellow] {chosen_model}")
-
-    # Probar conexión opcionalmente
-    test_now = questionary.confirm("¿Deseas realizar un test de conexión ahora?", default=True).ask()
-    if test_now:
-        test_provider_connection(config_mgr)
 
     return True
 

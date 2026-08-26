@@ -292,7 +292,16 @@ def chat(
 
             cleaned_cmd = user_input.strip().lower()
 
-            if cleaned_cmd in ["exit", "quit", "salir"]:
+            # Comandos de navegación y control interactivo
+            if cleaned_cmd in ["inicio", "home", "menu", "principal", "banner"]:
+                os.system("clear" if os.name != "nt" else "cls")
+                provider = config_mgr.get_active_provider()
+                model = config_mgr.get_active_model()
+                active_scope_name = scope_mgr.get_active_scope_name()
+                key_pool_size = config_mgr.get_api_key_count(provider)
+                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size)
+                continue
+            elif cleaned_cmd in ["exit", "quit", "salir", "q"]:
                 console.print("[bold cyan]Hasta pronto, operador. Tu sesión quedó guardada en el historial.[/bold cyan]")
                 break
             elif cleaned_cmd in ["clear", "cls", "limpiar"]:
@@ -316,11 +325,12 @@ def chat(
                 if active_scope_name:
                     console.print(f"[bold green][✓] Alcance activo actualizado a:[/bold green] [bold white]{active_scope_name}[/bold white]")
                 continue
-            elif cleaned_cmd in ["config", "configurar"]:
-                interactive_config_wizard(config_mgr)
-                provider = config_mgr.get_active_provider()
-                model = config_mgr.get_active_model()
-                agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=agent.current_session.id)
+            elif cleaned_cmd in ["config", "configurar", "modelo", "model", "provider"]:
+                changed = interactive_config_wizard(config_mgr)
+                if changed:
+                    provider = config_mgr.get_active_provider()
+                    model = config_mgr.get_active_model()
+                    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=agent.current_session.id)
                 continue
             elif cleaned_cmd in ["creds", "credenciales", "hashes"]:
                 _interactive_creds_menu()
@@ -331,19 +341,17 @@ def chat(
             elif cleaned_cmd in ["network", "red", "net"]:
                 console.print("[bold cyan][*] Usa 'blood-cipher audit network <target>' desde la terminal o escribe tu solicitud de red aquí.[/bold cyan]")
                 continue
-            elif cleaned_cmd in ["ayuda", "help"]:
+            elif cleaned_cmd in ["ayuda", "help", "?"]:
                 console.print("""
-[bold cyan]Comandos de la sesión:[/bold cyan]
-  [green]exit / quit[/green]     - Guardar y salir de Blood-Cipher
-  [green]scope[/green]           - Gestionar y cargar documentos de alcance (SOW / ROE)
-  [green]historial[/green]       - Ver y cambiar entre chats anteriores
-  [green]new / nuevo[/green]     - Iniciar un nuevo chat limpio
-  [green]clear[/green]           - Limpiar la pantalla de la terminal
-  [green]config[/green]          - Cambiar de modelo o API Key
-  [bold green]creds[/bold green]           - Abrir auditoría de credenciales y hashes
-  [bold green]vulns[/bold green]           - Escaneo de vulnerabilidades
-  [bold green]network[/bold green]         - Pruebas y auditoría de red
-  [green]ayuda[/green]           - Mostrar este mensaje de ayuda
+[bold cyan]🎮 Comandos Rápidos e Interactivos del Chat:[/bold cyan]
+  [bold green]inicio / menu[/bold green]   - Redibujar la interfaz y el banner táctico principal
+  [bold green]scope / sow[/bold green]     - Cambiar, crear o importar un nuevo objetivo/alcance (SOW)
+  [bold green]config / model[/bold green]  - Cambiar de modelo de IA o API Key al vuelo sin reiniciar
+  [bold green]historial[/bold green]       - Listar y cambiar entre sesiones de chat anteriores
+  [bold green]new / nuevo[/bold green]     - Iniciar un nuevo chat limpio
+  [bold green]clear[/bold green]           - Limpiar la pantalla de la terminal
+  [bold green]exit / salir[/bold green]    - Guardar y salir de Blood-Cipher
+  [bold cyan]Ctrl + C[/bold cyan]        - Cancelar acción actual / Regresar al menú anterior
                 """)
                 continue
 
@@ -353,8 +361,12 @@ def chat(
             # Ejecutar turno de razonamiento y acción
             agent.send_message(user_input)
 
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[bold cyan]Sesión guardada y finalizada. Cerrando Blood-Cipher...[/bold cyan]")
+        except KeyboardInterrupt:
+            # Captura de Ctrl+C suave: volver al prompt sin matar la aplicación bruscamente
+            console.print("\n[yellow][*] Operación interrumpida (Ctrl+C). Escribe 'inicio' para ver el panel o 'exit' para salir.[/yellow]")
+            continue
+        except EOFError:
+            console.print("\n[bold cyan]Sesión guardada. Cerrando Blood-Cipher...[/bold cyan]")
             break
         except Exception as e:
             render_error("Excepción en la sesión", str(e))
