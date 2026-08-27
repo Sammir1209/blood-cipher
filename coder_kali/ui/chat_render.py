@@ -16,7 +16,7 @@ from rich.box import ROUNDED, DOUBLE, HEAVY
 
 console = Console()
 
-BANNER_ART = r"""
+BANNER_ART_LINUX = r"""
   ██████╗ ██╗      ██████╗  ██████╗ ██████╗       ██████╗██╗██████╗ ██╗  ██╗███████╗██████╗ 
   ██╔══██╗██║     ██╔═══██╗██╔═══██╗██╔══██╗     ██╔════╝██║██╔══██╗██║  ██║██╔════╝██╔══██╗
   ██████╔╝██║     ██║   ██║██║   ██║██║  ██║     ██║     ██║██████╔╝███████║█████╗  ██████╔╝
@@ -25,29 +25,50 @@ BANNER_ART = r"""
   ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝       ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
 
+BANNER_ART_WINDOWS = r"""
+  ██████╗ ██╗      ██████╗  ██████╗ ██████╗       ██╗    ██╗██╗███╗   ██╗██████╗  ██████╗ ██╗    ██╗███████╗
+  ██╔══██╗██║     ██╔═══██╗██╔═══██╗██╔══██╗     ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
+  ██████╔╝██║     ██║   ██║██║   ██║██║  ██║     ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
+  ██╔══██╗██║     ██║   ██║██║   ██║██║  ██║     ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
+  ██████╔╝███████╗╚██████╔╝╚██████╔╝██████╔╝     ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
+  ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝       ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
+"""
 
-def print_banner(version: str = "1.5.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None, key_pool_size: int = 1):
-    """Imprime el banner principal estilo hacker/cyberpunk con metadata de sesión."""
-    console.print(f"[bold red]{BANNER_ART}[/bold red]")
+
+def print_banner(version: str = "2.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None, key_pool_size: int = 1):
+    """Imprime el banner temático adaptado para Windows o Linux."""
+    import platform
+    is_windows = platform.system() == "Windows"
+
+    if is_windows:
+        console.print(f"[bold deep_sky_blue1]{BANNER_ART_WINDOWS}[/bold deep_sky_blue1]")
+        header_title = "[bold deep_sky_blue1]● SISTEMA DE OPERACIONES TÁCTICAS IA — WINDOWS ELITE[/bold deep_sky_blue1]"
+        border_style = "deep_sky_blue1"
+        os_label = "v" + version + " [Windows Native / PowerShell Host]"
+    else:
+        console.print(f"[bold red]{BANNER_ART_LINUX}[/bold red]")
+        header_title = "[bold green]● SISTEMA DE OPERACIONES TÁCTICAS IA — KALI LINUX[/bold green]"
+        border_style = "bright_blue"
+        os_label = "v" + version + " [Linux Native / Kali]"
 
     info_table = Table.grid(padding=(0, 2))
-    info_table.add_column(style="bold bright_green")
+    info_table.add_column(style="bold bright_green" if not is_windows else "bold bright_cyan")
     info_table.add_column(style="bold white")
 
-    info_table.add_row("⚡ Versión:", f"v{version} [Linux Native]")
+    info_table.add_row("⚡ Versión:", os_label)
     provider_str = f"[cyan]{provider.upper()}[/cyan]"
     if key_pool_size > 1:
         provider_str += f"  [bold green]🔄 {key_pool_size} API Keys en rotación[/bold green]"
     info_table.add_row("🤖 Proveedor IA:", provider_str)
     info_table.add_row("🧠 Modelo Activo:", f"[yellow]{model}[/yellow]")
     info_table.add_row("🎯 Alcance / SOW:", f"[bold green]{scope}[/bold green]" if scope else "[dim]No definido ('scope' para cargar)[/dim]")
-    info_table.add_row("🛡️  Modo de Seguridad:", "[green]Supervisión PTY Activa[/green]")
+    info_table.add_row("🛡️  Modo de Shell:", "[bold cyan]PowerShell 5.1/7+ Seguro[/bold cyan]" if is_windows else "[green]Supervisión PTY Activa (sudo)[/green]")
     info_table.add_row("💡 Comandos Rápidos:", "[dim]escribe 'exit', 'scope', 'config', 'clear' o 'ayuda'[/dim]")
 
     panel = Panel(
         info_table,
-        title="[bold green]● SISTEMA DE OPERACIONES TÁCTICAS IA[/bold green]",
-        border_style="bright_blue",
+        title=header_title,
+        border_style=border_style,
         box=ROUNDED,
         padding=(0, 2),
     )
@@ -56,14 +77,19 @@ def print_banner(version: str = "1.5.0", provider: str = "gemini", model: str = 
 
 
 def render_user_message(message: str):
-    """Renderiza el mensaje del operador con estilo táctico cyberpunk."""
+    """Renderiza el mensaje del operador con estilo táctico adaptado al SO."""
+    import platform
+    is_windows = platform.system() == "Windows"
+
     console.print()
-    from rich.columns import Columns
-    badge = Text(" ⚡ OPERADOR ", style="bold black on bright_green")
+    badge_style = "bold black on bright_cyan" if is_windows else "bold black on bright_green"
+    border_style = "bright_cyan" if is_windows else "bright_green"
+
+    badge = Text(" ⚡ OPERADOR (WINDOWS) " if is_windows else " ⚡ OPERADOR (KALI) ", style=badge_style)
     console.print(badge)
     panel = Panel(
         Text(message, style="bold white"),
-        border_style="bright_green",
+        border_style=border_style,
         box=ROUNDED,
         padding=(0, 2),
     )
@@ -73,6 +99,8 @@ def render_user_message(message: str):
 def render_ai_message(message: str):
     """Renderiza la respuesta directa de Blood-Cipher en formato Markdown de élite."""
     import re
+    import platform
+    is_windows = platform.system() == "Windows"
 
     # 1. Eliminar etiquetas de razonamiento/pensamiento
     cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', message, flags=re.IGNORECASE)
@@ -97,13 +125,17 @@ def render_ai_message(message: str):
             return
 
     console.print()
-    header = Text(" 🤖 BLOOD-CIPHER TACTICAL AI ", style="bold black on bright_cyan")
+    header_title = " 🤖 BLOOD-CIPHER [WINDOWS TACTICAL AI] " if is_windows else " 🤖 BLOOD-CIPHER [KALI TACTICAL AI] "
+    header_style = "bold black on deep_sky_blue1" if is_windows else "bold black on bright_cyan"
+    border_style = "deep_sky_blue1" if is_windows else "bright_cyan"
+
+    header = Text(header_title, style=header_style)
     console.print(header)
 
     md = Markdown(cleaned_text, code_theme="monokai", hyperlinks=True)
     panel = Panel(
         md,
-        border_style="bright_cyan",
+        border_style=border_style,
         box=ROUNDED,
         padding=(1, 2),
     )

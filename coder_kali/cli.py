@@ -236,6 +236,74 @@ def main_callback(
         chat(new_session=new_session)
 
 
+def _get_multiline_user_input() -> str:
+    """
+    Captura la entrada del usuario soportando pegado de textos largos multilínea en Windows y Linux.
+    Evita que al pegar un texto largo con múltiples saltos de línea se envíe únicamente
+    la primera línea.
+    """
+    import platform
+    is_windows = platform.system() == "Windows"
+    prompt_str = "\x1b[1;96mblood-cipher >\x1b[0m " if is_windows else "\x1b[1;92mblood-cipher >\x1b[0m "
+    rich_prompt = "[bold bright_cyan]blood-cipher >[/bold bright_cyan]" if is_windows else "[bold bright_green]blood-cipher >[/bold bright_green]"
+
+    first_line = ""
+
+    # 1. Intentar con prompt_toolkit
+    try:
+        from prompt_toolkit import PromptSession
+        from prompt_toolkit.formatted_text import ANSI
+        session = PromptSession()
+        first_line = session.prompt(
+            ANSI(prompt_str),
+            multiline=False,
+        )
+    except Exception:
+        first_line = Prompt.ask(rich_prompt)
+
+    if not first_line:
+        return ""
+
+    lines = [first_line]
+
+    if is_windows:
+        # En Windows: Cuando se pega texto con saltos de línea, los caracteres posteriores
+        # ya están disponibles en el búfer de entrada de la consola de Windows.
+        try:
+            import msvcrt
+            import time
+            time.sleep(0.04) # Breve margen para que el clipboard vuelque las líneas restantes
+            
+            # Drenar caracteres acumulados en el buffer del teclado
+            extra_chars = []
+            while msvcrt.kbhit():
+                ch = msvcrt.getwche() if hasattr(msvcrt, "getwche") else msvcrt.getch().decode("utf-8", errors="ignore")
+                extra_chars.append(ch)
+            
+            if extra_chars:
+                remaining_text = "".join(extra_chars)
+                # Separar por saltos de línea y adjuntar
+                for line in remaining_text.splitlines():
+                    if line:
+                        lines.append(line)
+        except Exception:
+            pass
+    else:
+        # En Linux / Kali: Drenar usando select en stdin
+        import select
+        while True:
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
+            if rlist:
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                lines.append(line.rstrip("\r\n"))
+            else:
+                break
+
+    return "\n".join(lines).strip()
+
+
 @app.command(name="chat", help="Inicia una sesión de chat interactiva en vivo con Blood-Cipher.")
 def chat(
     new_session: bool = typer.Option(False, "--new", "-n", help="Inicia una nueva sesión sin preguntar por el historial.")
@@ -286,7 +354,7 @@ def chat(
 
     while True:
         try:
-            user_input = Prompt.ask("[bold bright_green]blood-cipher >[/bold bright_green]")
+            user_input = _get_multiline_user_input()
             if not user_input or not user_input.strip():
                 continue
 

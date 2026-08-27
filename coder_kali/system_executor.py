@@ -63,7 +63,10 @@ class SystemExecutor:
 
     def __init__(self, auto_approve_safe: bool = False):
         self.auto_approve_safe = auto_approve_safe
-        self.is_linux = platform.system() == "Linux"
+        self.os_type = platform.system().lower()
+        self.is_linux = self.os_type == "linux"
+        self.is_windows = self.os_type == "windows"
+        self.is_darwin = self.os_type == "darwin"
 
     def parse_actions(self, text: str) -> List[ParsedAction]:
         """Extrae todas las acciones (XML o JSON) en el texto de la IA en orden de aparición."""
@@ -309,10 +312,18 @@ class SystemExecutor:
             )
 
     def _execute_standard(self, cmd: str) -> ExecutionResult:
-        """Ejecución estándar mediante subprocess."""
+        """Ejecución estándar mediante subprocess (PowerShell en Windows, Bash en Linux)."""
         try:
-            shell_cmd = ["/bin/bash", "-c", cmd] if self.is_linux else cmd
-            use_shell = not self.is_linux
+            if self.is_linux:
+                shell_cmd = ["/bin/bash", "-c", cmd]
+                use_shell = False
+            elif self.is_windows:
+                # En Windows ejecutar a través de PowerShell para soportar scripts, netsh, Get-NetAdapter, etc.
+                shell_cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd]
+                use_shell = False
+            else:
+                shell_cmd = cmd
+                use_shell = True
 
             process = subprocess.Popen(
                 shell_cmd,

@@ -943,6 +943,7 @@ class NetworkAuditor:
 
     def __init__(self):
         self._nmap_path = shutil.which("nmap")
+        self.is_windows = os.name == "nt"
 
     def _run_cmd(self, cmd: List[str], timeout: int = 120) -> str:
         """Ejecuta un comando y retorna su salida."""
@@ -974,14 +975,50 @@ class NetworkAuditor:
         os_detect: bool = False,
         scripts: bool = False,
     ) -> NetworkResult:
-        """Escaneo avanzado de puertos con Nmap configurable."""
+        """Escaneo avanzado de puertos con Nmap o Socket Scanner concurrente en Windows."""
         if not self._nmap_path:
-            return NetworkResult(
-                target=target, scan_type="port_scan",
-                raw_output="[Error] Nmap no instalado. Instala con: sudo apt install nmap",
-            )
+            if self.is_windows:
+                # Motor de escaneo por socket ultra rápido nativo para Windows
+                import socket
+                from concurrent.futures import ThreadPoolExecutor
 
-        cmd = ["sudo", self._nmap_path]
+                open_ports = []
+                target_ports = [80, 443, 8080, 8443, 21, 22, 25, 53, 110, 139, 445, 3389, 3306, 5432, 27017, 6379]
+                if ports == "full" or ports == "all":
+                    target_ports = list(range(1, 1025))
+                elif ports == "top100":
+                    target_ports = [20,21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080]
+
+                def scan_port(p):
+                    try:
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.settimeout(0.6)
+                        if s.connect_ex((target, p)) == 0:
+                            return p
+                    except Exception:
+                        pass
+                    finally:
+                        s.close()
+                    return None
+
+                with ThreadPoolExecutor(max_workers=50) as executor:
+                    res = executor.map(scan_port, target_ports)
+                    open_ports = [p for p in res if p]
+
+                raw = f"Escaneo de Sockets Windows para {target}:\n" + "\n".join([f"Puerto {p}/TCP abierto" for p in open_ports])
+                parsed = {"open_ports": [f"{p}/tcp" for p in open_ports], "services": []}
+                return NetworkResult(
+                    target=target, scan_type="port_scan (Windows Socket Engine)",
+                    raw_output=raw, parsed_data=parsed,
+                    timestamp=time.time(),
+                )
+            else:
+                return NetworkResult(
+                    target=target, scan_type="port_scan",
+                    raw_output="[Error] Nmap no instalado. Instala con: sudo apt install nmap",
+                )
+
+        cmd = [self._nmap_path] if self.is_windows else ["sudo", self._nmap_path]
 
         # Tipo de escaneo
         scan_flags = {

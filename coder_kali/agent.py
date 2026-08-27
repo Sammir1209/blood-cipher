@@ -68,8 +68,37 @@ class KaliAgent:
             self.reset_conversation()
 
     def _get_effective_system_prompt(self) -> str:
-        """Construye el prompt de sistema directo."""
+        """Construye el prompt de sistema directo con contexto de entorno del host actual."""
         prompt = self.system_prompt
+        
+        # Inyectar información sobre el sistema operativo anfitrión real
+        import platform
+        os_name = platform.system()
+        os_release = platform.release()
+        
+        if os_name == "Windows":
+            os_context = f"""
+[ENTORNO ANFITRIÓN ACTUAL: MICROSOFT WINDOWS ({os_name} {os_release})]
+- Estás ejecutándote de forma NATIVA sobre el sistema operativo Windows del operador (host físico).
+- Tienes acceso directo al hardware Wi-Fi, adaptadores de red físicos y puertos reales mediante PowerShell y CMD.
+- Para diagnóstico de red y Wi-Fi en Windows, utiliza comandos nativos como:
+  * `netsh wlan show interfaces` (muestra SSID conectado, BSSID, señal %, canal, tipo de radio 802.11ax/ac/n, RX/TX Mbps reales).
+  * `netsh wlan show networks mode=bssid` (escaneo pasivo de todas las redes circundantes y canales).
+  * `Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed` (PowerShell).
+  * `Get-NetAdapterAdvancedProperty -Name "Wi-Fi"` (propiedades avanzadas del driver y chip Wi-Fi).
+  * `Test-NetConnection -ComputerName 8.8.8.8 -InformationLevel Detailed` (latencia, ping y ruta).
+  * `Get-DnsClientServerAddress` / `Resolve-DnsName google.com` (DNS).
+- Para scripts auxiliares en Windows usa Python 3 (`python ...`) o PowerShell (`powershell -Command ...`).
+- Emite tus comandos dentro de `<ejecutar_comando>` y scripts en `<escribir_archivo>`.
+"""
+            prompt += f"\n\n{os_context}"
+        else:
+            os_context = f"""
+[ENTORNO ANFITRIÓN ACTUAL: LINUX / POSIX ({os_name} {os_release})]
+- Estás ejecutándote en entorno Linux. Utiliza herramientas estándar como ip, iw, nmcli, lspci, lsusb, etc.
+"""
+            prompt += f"\n\n{os_context}"
+
         active_scope = self.scope_mgr.get_active_scope_content()
         if active_scope:
             prompt += f"\n\n[CONTEXTO OPERATIVO / OBJETIVO]\n{active_scope}"
