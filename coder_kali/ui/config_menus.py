@@ -321,20 +321,23 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
                 model = data.get("model", "")
 
                 if provider:
-                    config_mgr.set_active_provider(provider)
+                    if model:
+                        config_mgr.set_provider(provider, model)
+                    else:
+                        config_mgr.set_provider(provider)
+
                     if api_key:
                         config_mgr.set_api_key(provider, api_key)
+
                     if api_base:
                         if "api_bases" not in config_mgr.config:
                             config_mgr.config["api_bases"] = {}
                         config_mgr.config["api_bases"][provider] = api_base
                         config_mgr.save()
-                    if model:
-                        config_mgr.set_active_model(model)
 
                     saved_state["saved"] = True
                     saved_state["provider"] = provider
-                    saved_state["model"] = model
+                    saved_state["model"] = config_mgr.get_active_model()
 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
