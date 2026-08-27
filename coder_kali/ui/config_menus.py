@@ -1,6 +1,9 @@
 import os
 import sys
+import json
+import webbrowser
 from typing import Optional, List, Dict, Any
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import questionary
 from rich.console import Console
 from rich.panel import Panel
@@ -11,19 +14,393 @@ from coder_kali.model_discovery import fetch_live_models
 console = Console()
 
 
+def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
+    """Levanta un servidor web local estilizado para configurar Blood-Cipher visualmente."""
+    saved_state = {"saved": False, "provider": "", "model": ""}
+
+    class ConfigHTTPHandler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            pass  # Silenciar logs ruidosos
+
+        def do_GET(self):
+            if self.path == "/" or self.path.startswith("/?"):
+                self.send_response(200)
+                self.send_header("Content-type", "text/html; charset=utf-8")
+                self.end_headers()
+                
+                # Opciones de proveedores
+                curr_p = config_mgr.get_active_provider()
+                curr_m = config_mgr.get_active_model()
+                curr_k = config_mgr.get_api_key(curr_p) or ""
+                curr_b = config_mgr.get_api_base(curr_p) or ""
+
+                prov_options = ""
+                for p_key, p_val in DEFAULT_PROVIDERS.items():
+                    sel = "selected" if p_key == curr_p else ""
+                    prov_options += f'<option value="{p_key}" {sel}>{p_val["name"]} ({p_key})</option>'
+
+                providers_json = json.dumps(DEFAULT_PROVIDERS)
+                current_config_json = json.dumps({
+                    "active_provider": curr_p,
+                    "active_model": curr_m,
+                    "api_keys": config_mgr.config.get("api_keys", {}),
+                    "api_bases": config_mgr.config.get("api_bases", {})
+                })
+
+                html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood-Cipher — Panel de Configuración</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {{
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.85);
+            --primary: #00d2ff;
+            --accent: #3a7bd5;
+            --success: #00e676;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-glow: rgba(0, 210, 255, 0.3);
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            background: radial-gradient(circle at top right, #111e38, #070a12 70%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }}
+        .container {{
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            max-width: 680px;
+            width: 100%;
+            padding: 36px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0, 210, 255, 0.15);
+        }}
+        .header {{
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 18px;
+        }}
+        .badge {{
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #000;
+            font-weight: 800;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }}
+        h1 {{ font-size: 24px; font-weight: 700; color: #fff; }}
+        p.subtitle {{ color: var(--text-muted); font-size: 14px; margin-top: 4px; }}
+        .form-group {{ margin-bottom: 20px; }}
+        label {{
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }}
+        select, input[type="text"], input[type="password"] {{
+            width: 100%;
+            background: rgba(10, 15, 26, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            transition: all 0.2s ease;
+        }}
+        select:focus, input:focus {{
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.35);
+        }}
+        .helper {{ font-size: 12px; color: var(--text-muted); margin-top: 6px; }}
+        .btn-group {{
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }}
+        button {{
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Outfit', sans-serif;
+        }}
+        .btn-primary {{
+            background: linear-gradient(135deg, #00d2ff, #0072ff);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0, 114, 255, 0.4);
+        }}
+        .btn-primary:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 210, 255, 0.6);
+        }}
+        .status-box {{
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }}
+        .status-box.success {{
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+            display: block;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="badge">BLOOD-CIPHER</div>
+            <div>
+                <h1>Configurador Web Visual</h1>
+                <p class="subtitle">Selecciona tu proveedor, pega tu clave y modelos fácilmente.</p>
+            </div>
+        </div>
+
+        <form id="configForm" onsubmit="saveConfig(event)">
+            <div class="form-group">
+                <label for="provider">Proveedor de Inteligencia Artificial</label>
+                <select id="provider" onchange="updateProviderFields()">
+                    {prov_options}
+                </select>
+            </div>
+
+            <div class="form-group" id="apiKeyGroup">
+                <label for="apiKey">API Key / Token de Acceso</label>
+                <input type="text" id="apiKey" placeholder="Pega tu API Key aquí (ej. sk-...)" autocomplete="off">
+                <div class="helper" id="apiKeyHelper">Tu API Key se guardará cifrada localmente.</div>
+            </div>
+
+            <div class="form-group" id="apiBaseGroup">
+                <label for="apiBase">Endpoint URL (Base / Proxy)</label>
+                <input type="text" id="apiBase" placeholder="https://api.openai.com/v1" autocomplete="off">
+                <div class="helper">Opcional: déjalo por defecto o usa un proxy / endpoint personalizado.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="model">Modelo de Inteligencia Artificial</label>
+                <input type="text" id="model" placeholder="Selecciona o escribe el modelo" autocomplete="off" list="modelList">
+                <datalist id="modelList"></datalist>
+                <div class="helper">Puedes escribir un modelo personalizado o elegir uno de la lista.</div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn-primary" id="saveBtn">💾 Guardar Configuración y Continuar</button>
+            </div>
+        </form>
+
+        <div id="statusBox" class="status-box"></div>
+    </div>
+
+    <script>
+        const providers = {providers_json};
+        const currentCfg = {current_config_json};
+
+        function updateProviderFields() {{
+            const p = document.getElementById('provider').value;
+            const meta = providers[p] || {{}};
+
+            // Actualizar API Key
+            const keyInput = document.getElementById('apiKey');
+            const keyGroup = document.getElementById('apiKeyGroup');
+            if (meta.requires_api_key === false) {{
+                keyGroup.style.display = 'none';
+            }} else {{
+                keyGroup.style.display = 'block';
+                keyInput.value = currentCfg.api_keys[p] || '';
+            }}
+
+            // Actualizar API Base
+            const baseInput = document.getElementById('apiBase');
+            baseInput.value = currentCfg.api_bases[p] || meta.default_api_base || '';
+
+            // Actualizar Modelos
+            const dataList = document.getElementById('modelList');
+            dataList.innerHTML = '';
+            const models = meta.available_models || [];
+            models.forEach(m => {{
+                const opt = document.createElement('option');
+                opt.value = m;
+                dataList.appendChild(opt);
+            }});
+
+            const modelInput = document.getElementById('model');
+            if (p === currentCfg.active_provider && currentCfg.active_model) {{
+                modelInput.value = currentCfg.active_model;
+            }} else {{
+                modelInput.value = meta.default_model || models[0] || '';
+            }}
+        }}
+
+        async function saveConfig(e) {{
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            const payload = {{
+                provider: document.getElementById('provider').value,
+                api_key: document.getElementById('apiKey').value.trim(),
+                api_base: document.getElementById('apiBase').value.trim(),
+                model: document.getElementById('model').value.trim()
+            }};
+
+            try {{
+                const res = await fetch('/save', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }});
+                const data = await res.json();
+                if (data.ok) {{
+                    const box = document.getElementById('statusBox');
+                    box.className = 'status-box success';
+                    box.innerText = '✓ ¡Configuración guardada exitosamente! Puedes cerrar esta ventana y regresar a tu terminal.';
+                    setTimeout(() => {{
+                        window.close();
+                    }}, 2000);
+                }}
+            }} catch (err) {{
+                alert('Error al guardar: ' + err.message);
+                btn.disabled = false;
+                btn.innerText = '💾 Guardar Configuración y Continuar';
+            }}
+        }}
+
+        updateProviderFields();
+    </script>
+</body>
+</html>"""
+                self.wfile.write(html.encode("utf-8"))
+
+            elif self.path == "/close":
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"OK")
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):
+            if self.path == "/save":
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length).decode("utf-8")
+                data = json.loads(body)
+
+                provider = data.get("provider")
+                api_key = data.get("api_key", "")
+                api_base = data.get("api_base", "")
+                model = data.get("model", "")
+
+                if provider:
+                    config_mgr.set_active_provider(provider)
+                    if api_key:
+                        config_mgr.set_api_key(provider, api_key)
+                    if api_base:
+                        if "api_bases" not in config_mgr.config:
+                            config_mgr.config["api_bases"] = {}
+                        config_mgr.config["api_bases"][provider] = api_base
+                        config_mgr.save()
+                    if model:
+                        config_mgr.set_active_model(model)
+
+                    saved_state["saved"] = True
+                    saved_state["provider"] = provider
+                    saved_state["model"] = model
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
+
+    server = HTTPServer(("127.0.0.1", port), ConfigHTTPHandler)
+    url = f"http://127.0.0.1:{port}"
+    console.print(f"\n[bold green][✓] Servidor de configuración Web iniciado en:[/bold green] [bold cyan]{url}[/bold cyan]")
+    console.print("[dim]Abriendo navegador automáticamente... (Presiona Ctrl+C en la terminal para volver si ya terminaste)[/dim]\n")
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+
+    try:
+        while not saved_state["saved"]:
+            server.handle_request()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+
+    if saved_state["saved"]:
+        console.print(f"[bold green][✓] Configuración guardada vía Web:[/bold green] [bold white]{saved_state['provider']}[/bold white] → [bold yellow]{saved_state['model']}[/bold yellow]")
+        return True
+    return False
+
+
 def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
-    """Guía al usuario paso a paso en la configuración de Blood-Cipher."""
+    """Guía al usuario paso a paso en la configuración de Blood-Cipher, con opción CLI o Web."""
     console.print()
     console.print(
         Panel(
             "[bold cyan]Asistente de Configuración de Modelos y Credenciales de IA[/bold cyan]\n"
-            "[dim]Elige tu proveedor preferido e introduce tu clave de API si es requerida.[/dim]",
+            "[dim]Puedes configurar todo desde la terminal (CLI) o abrir el configurador visual en tu navegador (Web).[/dim]",
             title="⚙️ CONFIGURACIÓN BLOOD-CIPHER",
             border_style="cyan",
         )
     )
 
-    # 1. Selección de Proveedor
+    # Preguntar si prefiere Asistente Web o Asistente CLI
+    mode_choice = questionary.select(
+        "¿Cómo prefieres configurar Blood-Cipher?",
+        choices=[
+            questionary.Choice(
+                title="🌐 [Configurador Web Visual] (Abre tu navegador, pega tu API Key y elige modelos fácilmente)",
+                value="WEB"
+            ),
+            questionary.Choice(
+                title="💻 [Configurador por Terminal / CLI] (Paso a paso en esta consola)",
+                value="CLI"
+            ),
+            questionary.Choice(title="🔙 Regresar / Cancelar", value="BACK"),
+        ],
+        default="WEB"
+    ).ask()
+
+    if not mode_choice or mode_choice == "BACK":
+        console.print("[yellow][*] Regresando al menú anterior.[/yellow]")
+        return False
+
+    if mode_choice == "WEB":
+        return _run_web_config_portal(config_mgr)
+
+    # 1. Selección de Proveedor CLI
     provider_choices = [
         questionary.Choice(
             title=f"{info['name']} ({prov})",
