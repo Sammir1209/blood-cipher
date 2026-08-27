@@ -236,60 +236,90 @@ def main_callback(
         chat(new_session=new_session)
 
 
+def _get_windows_clipboard_text() -> Optional[str]:
+    """Obtiene el texto actual del portapapeles de Windows de forma directa mediante la API Win32."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        if not user32.OpenClipboard(None):
+            return None
+        try:
+            CF_UNICODETEXT = 13
+            handle = user32.GetClipboardData(CF_UNICODETEXT)
+            if not handle:
+                return None
+            kernel32.GlobalLock.restype = ctypes.c_wchar_p
+            ptr = kernel32.GlobalLock(handle)
+            text = str(ptr) if ptr else None
+            kernel32.GlobalUnlock(handle)
+            return text
+        finally:
+            user32.CloseClipboard()
+    except Exception:
+        return None
+
+
 def _get_multiline_user_input() -> str:
     """
     Captura la entrada del usuario soportando pegado de textos largos multilínea en Windows y Linux.
-    Evita que al pegar un texto largo con múltiples saltos de línea se envíe únicamente
-    la primera línea.
+    Permite pegar con Ctrl+V, Shift+Insert, clic derecho o drenado directo del buffer.
     """
     import platform
     is_windows = platform.system() == "Windows"
     prompt_str = "\x1b[1;96mblood-cipher >\x1b[0m " if is_windows else "\x1b[1;92mblood-cipher >\x1b[0m "
     rich_prompt = "[bold bright_cyan]blood-cipher >[/bold bright_cyan]" if is_windows else "[bold bright_green]blood-cipher >[/bold bright_green]"
 
-    first_line = ""
-
-    # 1. Intentar con prompt_toolkit
+    # 1. Intentar con prompt_toolkit vinculando Ctrl+V al portapapeles nativo
     try:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.formatted_text import ANSI
-        session = PromptSession()
-        first_line = session.prompt(
+        from prompt_toolkit.key_binding import KeyBindings
+
+        kb = KeyBindings()
+
+        if is_windows:
+            @kb.add("c-v")
+            def _handle_paste_ctrl_v(event):
+                """Mapeo explícito de Ctrl+V al portapapeles del sistema Windows."""
+                clip_text = _get_windows_clipboard_text()
+                if clip_text:
+                    event.current_buffer.insert_text(clip_text)
+
+        session = PromptSession(key_bindings=kb)
+        user_text = session.prompt(
             ANSI(prompt_str),
             multiline=False,
         )
+        return user_text.strip() if user_text else ""
     except Exception:
-        first_line = Prompt.ask(rich_prompt)
+        pass
 
+    # 2. Fallback a lectura estándar
+    first_line = Prompt.ask(rich_prompt)
     if not first_line:
         return ""
 
     lines = [first_line]
 
     if is_windows:
-        # En Windows: Cuando se pega texto con saltos de línea, los caracteres posteriores
-        # ya están disponibles en el búfer de entrada de la consola de Windows.
         try:
             import msvcrt
             import time
-            time.sleep(0.04) # Breve margen para que el clipboard vuelque las líneas restantes
-            
-            # Drenar caracteres acumulados en el buffer del teclado
+            time.sleep(0.05)
             extra_chars = []
             while msvcrt.kbhit():
                 ch = msvcrt.getwche() if hasattr(msvcrt, "getwche") else msvcrt.getch().decode("utf-8", errors="ignore")
                 extra_chars.append(ch)
-            
             if extra_chars:
-                remaining_text = "".join(extra_chars)
-                # Separar por saltos de línea y adjuntar
-                for line in remaining_text.splitlines():
-                    if line:
-                        lines.append(line)
+                for l in "".join(extra_chars).splitlines():
+                    if l:
+                        lines.append(l)
         except Exception:
             pass
     else:
-        # En Linux / Kali: Drenar usando select en stdin
         import select
         while True:
             rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
