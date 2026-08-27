@@ -64,7 +64,7 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
             if key_count > 1:
                 key_hint += f" [{key_count} keys en pool]"
 
-            entered_key = questionary.password(
+            entered_key = questionary.text(
                 f"Ingresa tu API Key para {prov_meta['name']}{key_hint} (o presiona Enter para conservar):"
             ).ask()
 
@@ -91,7 +91,7 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
                     all_keys = [api_key]
                     console.print("[dim]Pega cada API Key adicional (una por línea). Escribe 'FIN' para terminar:[/dim]")
                     while True:
-                        extra_key = questionary.password("API Key adicional (o 'FIN'):").ask()
+                        extra_key = questionary.text("API Key adicional (o 'FIN'):").ask()
                         if not extra_key or extra_key.strip().upper() == "FIN":
                             break
                         if extra_key.strip():
