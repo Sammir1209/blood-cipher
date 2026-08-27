@@ -2512,18 +2512,32 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
 
 
+from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 def start_web_server(port: int = 7777, open_browser: bool = True):
-    """Inicia el servidor Web Dashboard de Blood-Cipher."""
-    server_address = ("127.0.0.1", port)
-    try:
-        httpd = HTTPServer(server_address, CoderKaliHTTPHandler)
-    except OSError:
-        port = port + 1
-        server_address = ("127.0.0.1", port)
-        httpd = HTTPServer(server_address, CoderKaliHTTPHandler)
+    """Inicia el servidor Web Dashboard multi-hilo de Blood-Cipher."""
+    httpd = None
+    for attempt_port in range(port, port + 10):
+        try:
+            server_address = ("127.0.0.1", attempt_port)
+            httpd = ThreadingHTTPServer(server_address, CoderKaliHTTPHandler)
+            port = attempt_port
+            break
+        except OSError:
+            continue
+
+    if not httpd:
+        console.print(f"[bold red][!] No se pudo enlazar el servidor web en el rango de puertos {port}-{port+10}.[/bold red]")
+        return
 
     url = f"http://localhost:{port}"
-    console.print(f"\n[bold white]⚡ Centro de Operaciones Blood-Cipher Activo:[/bold white] [bold red]{url}[/bold red]")
+    console.print(f"\n[bold white]⚡ Centro de Operaciones Blood-Cipher Activo (Multi-Hilo):[/bold white] [bold cyan]{url}[/bold cyan]")
     console.print("[dim]Presiona Ctrl+C en esta terminal para detener el servidor.[/dim]\n")
 
     if open_browser:
@@ -2536,4 +2550,8 @@ def start_web_server(port: int = 7777, open_browser: bool = True):
         httpd.serve_forever()
     except KeyboardInterrupt:
         console.print("\n[bold yellow][*] Servidor web detenido.[/bold yellow]")
-        httpd.server_close()
+    finally:
+        try:
+            httpd.server_close()
+        except Exception:
+            pass

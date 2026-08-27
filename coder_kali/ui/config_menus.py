@@ -4,6 +4,7 @@ import json
 import webbrowser
 from typing import Optional, List, Dict, Any
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import questionary
 from rich.console import Console
 from rich.panel import Panel
@@ -344,7 +345,23 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
                 self.end_headers()
                 self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
 
-    server = HTTPServer(("127.0.0.1", port), ConfigHTTPHandler)
+    class ThreadingConfigServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
+        allow_reuse_address = True
+
+    server = None
+    for p in range(port, port + 10):
+        try:
+            server = ThreadingConfigServer(("127.0.0.1", p), ConfigHTTPHandler)
+            port = p
+            break
+        except OSError:
+            continue
+
+    if not server:
+        console.print("[bold red][!] No se pudo iniciar el portal web de configuración en puertos 8999-9009.[/bold red]")
+        return False
+
     url = f"http://127.0.0.1:{port}"
     console.print(f"\n[bold green][✓] Servidor de configuración Web iniciado en:[/bold green] [bold cyan]{url}[/bold cyan]")
     console.print("[dim]Abriendo navegador automáticamente... (Presiona Ctrl+C en la terminal para volver si ya terminaste)[/dim]\n")
@@ -359,7 +376,10 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
     except KeyboardInterrupt:
         pass
     finally:
-        server.server_close()
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
     if saved_state["saved"]:
         console.print(f"[bold green][✓] Configuración guardada vía Web:[/bold green] [bold white]{saved_state['provider']}[/bold white] → [bold yellow]{saved_state['model']}[/bold yellow]")
