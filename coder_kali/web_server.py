@@ -1647,6 +1647,25 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        function updateThinkingStatus(statusText) {
+            const el = document.getElementById('thinkingStatusText');
+            if (el) {
+                el.innerText = statusText;
+            }
+        }
+
+        function appendLiveActionPreview(action) {
+            const el = document.getElementById('thinkingActionsLog');
+            if (!el) return;
+            const item = document.createElement('div');
+            item.style.cssText = "font-size: 0.76rem; font-family: var(--font-code); color: var(--accent-green); display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.06);";
+            const icon = action.type === "command" ? '<i class="fa-solid fa-terminal" style="color:#ffffff;"></i>' : '<i class="fa-solid fa-file-code" style="color:#00d2ff;"></i>';
+            const text = action.command || action.target_path || "Acción ejecutada";
+            item.innerHTML = `${icon} <span>${escapeHtml(text)}</span> <span style="color:#00ff9d; margin-left:auto;">[✓]</span>`;
+            el.appendChild(item);
+            el.scrollTop = el.scrollHeight;
+        }
+
         function showThinkingBubble(promptText) {
             const stream = document.getElementById('chatStream');
             removeThinkingBubble();
@@ -1664,13 +1683,16 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
             msgDiv.id = 'thinkingBubble';
             msgDiv.className = 'chat-msg assistant';
             msgDiv.innerHTML = `
-                <div class="minimal-thinking">
-                    <div class="neural-dots-wave">
-                        <div class="neural-dot"></div>
-                        <div class="neural-dot"></div>
-                        <div class="neural-dot"></div>
+                <div class="minimal-thinking" style="flex-direction: column; align-items: flex-start; gap: 8px; max-width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="neural-dots-wave">
+                            <div class="neural-dot"></div>
+                            <div class="neural-dot"></div>
+                            <div class="neural-dot"></div>
+                        </div>
+                        <span class="thinking-context-text" id="thinkingStatusText">Analizando ${escapeHtml(targetLabel)}...</span>
                     </div>
-                    <span class="thinking-context-text">Analizando ${escapeHtml(targetLabel)}...</span>
+                    <div id="thinkingActionsLog" style="width: 100%; max-height: 140px; overflow-y: auto; padding-left: 28px; display: flex; flex-direction: column; gap: 2px;"></div>
                 </div>
             `;
             stream.appendChild(msgDiv);
@@ -1696,7 +1718,7 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
             btn.disabled = true;
 
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api/chat_stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1705,15 +1727,61 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
                         planning_mode: isPlanningMode
                     })
                 });
-                const data = await res.json();
-                removeThinkingBubble();
-                if (data.session_id) currentSessionId = data.session_id;
-                renderBubble('assistant', data.response);
-                loadSessions();
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error ${res.status}`);
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // Mantener el último segmento incompleto
+
+                    for (const block of lines) {
+                        if (!block.trim()) continue;
+                        let eventType = 'message';
+                        let dataStr = '';
+
+                        const blockLines = block.split('\n');
+                        for (const line of blockLines) {
+                            if (line.startsWith('event: ')) {
+                                eventType = line.substring(7).trim();
+                            } else if (line.startsWith('data: ')) {
+                                dataStr = line.substring(6).trim();
+                            }
+                        }
+
+                        if (dataStr) {
+                            try {
+                                const parsedData = JSON.parse(dataStr);
+                                if (eventType === 'status') {
+                                    updateThinkingStatus(parsedData.message);
+                                } else if (eventType === 'action') {
+                                    appendLiveActionPreview(parsedData);
+                                } else if (eventType === 'done') {
+                                    removeThinkingBubble();
+                                    if (parsedData.session_id) currentSessionId = parsedData.session_id;
+                                    renderBubble('assistant', parsedData.response);
+                                    loadSessions();
+                                }
+                            } catch (e) {
+                                console.error("Error al parsear SSE:", e, dataStr);
+                            }
+                        }
+                    }
+                }
             } catch (e) {
                 removeThinkingBubble();
                 renderBubble('assistant', 'Error de comunicación: ' + e);
             } finally {
+                removeThinkingBubble();
                 btn.innerHTML = '<span>EJECUTAR</span> <i class="fa-solid fa-arrow-right"></i>';
                 btn.disabled = false;
             }
@@ -2154,7 +2222,58 @@ class CoderKaliHTTPHandler(BaseHTTPRequestHandler):
         except Exception:
             data = {}
 
-        if path == "/api/chat":
+        if path == "/api/chat_stream":
+            prompt = data.get("prompt", "")
+            session_id = data.get("session_id")
+            planning_mode = data.get("planning_mode", False)
+
+            config_mgr = ConfigManager()
+            session_mgr = SessionManager()
+            scope_mgr = ScopeManager()
+            web_executor = SystemExecutor(auto_approve_safe=True)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+
+            def send_event(event_type: str, event_data: Any):
+                try:
+                    payload = f"event: {event_type}\ndata: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+                    self.wfile.write(payload.encode("utf-8"))
+                    self.wfile.flush()
+                except Exception:
+                    pass
+
+            def on_status(status_msg: str):
+                send_event("status", {"message": status_msg})
+
+            def on_action(action_data: Dict[str, Any]):
+                send_event("action", action_data)
+
+            agent = KaliAgent(
+                config_mgr=config_mgr,
+                system_executor=web_executor,
+                session_mgr=session_mgr,
+                scope_mgr=scope_mgr,
+                session_id=session_id,
+                planning_mode=planning_mode,
+                on_status_update=on_status,
+                on_action_update=on_action,
+            )
+
+            agent.max_tool_iterations = 4
+            send_event("status", {"message": "Analizando objetivo e inicializando arsenal táctico..."})
+            response_text = agent.send_message(prompt)
+
+            send_event("done", {
+                "response": response_text,
+                "session_id": agent.current_session.id,
+            })
+            return
+
+        elif path == "/api/chat":
             prompt = data.get("prompt", "")
             session_id = data.get("session_id")
             planning_mode = data.get("planning_mode", False)

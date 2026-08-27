@@ -41,6 +41,8 @@ class KaliAgent:
         session_id: Optional[str] = None,
         custom_system_prompt: Optional[str] = None,
         planning_mode: bool = False,
+        on_status_update: Optional[Any] = None,
+        on_action_update: Optional[Any] = None,
     ):
         self.config_mgr = config_mgr or ConfigManager()
         self.executor = system_executor or SystemExecutor()
@@ -51,6 +53,8 @@ class KaliAgent:
         self.system_prompt = custom_system_prompt or MEGA_PROMPT_SISTEMA
         self.messages: List[Dict[str, str]] = []
         self.max_tool_iterations = 10
+        self.on_status_update = on_status_update
+        self.on_action_update = on_action_update
 
         # Cargar sesión existente o crear nueva
         provider = self.config_mgr.get_active_provider()
@@ -219,6 +223,12 @@ class KaliAgent:
         self._rotation_count = 0
         self._synth_rotation = 0
 
+        if self.on_status_update:
+            try:
+                self.on_status_update("Razonando estrategia de acción...")
+            except Exception:
+                pass
+
         while iterations < self.max_tool_iterations:
             iterations += 1
 
@@ -228,6 +238,12 @@ class KaliAgent:
             retry_count = 0
 
             while retry_count < max_retries:
+                if self.on_status_update:
+                    try:
+                        self.on_status_update(f"Generando acciones tácticas (Paso {iterations})...")
+                    except Exception:
+                        pass
+
                 with console.status("[bold cyan]Blood-Cipher está pensando...[/bold cyan]", spinner="dots"):
                     try:
                         provider = self.config_mgr.get_active_provider()
@@ -387,8 +403,30 @@ class KaliAgent:
             should_stop = False
 
             for action in actions:
+                if self.on_status_update:
+                    try:
+                        if action.action_type == "command":
+                            self.on_status_update(f"Ejecutando: {action.content}")
+                        else:
+                            self.on_status_update(f"Escribiendo archivo: {action.target_path}")
+                    except Exception:
+                        pass
+
                 result = self.executor.process_action(action)
                 render_execution_result(result, command=action.content if action.action_type == "command" else None)
+
+                if self.on_action_update:
+                    try:
+                        self.on_action_update({
+                            "type": action.action_type,
+                            "command": action.content if action.action_type == "command" else "",
+                            "target_path": action.target_path or "",
+                            "output": result.output,
+                            "success": result.success,
+                            "returncode": result.returncode,
+                        })
+                    except Exception:
+                        pass
 
                 if action.action_type == "command":
                     # Truncar salidas de terminal largas para evitar reventar límites TPM de Groq
@@ -435,6 +473,12 @@ class KaliAgent:
 
         # Turno de análisis e interpretación interactiva de resultados para el operador
         if results_feedback and not should_stop:
+            if self.on_status_update:
+                try:
+                    self.on_status_update("Interpretando y estructurando reporte táctico final...")
+                except Exception:
+                    pass
+
             synth_prompt = (
                 "Interpreta los resultados obtenidos de la terminal de forma detallada e interactiva. "
                 "Destaca al operador las tecnologías, infraestructura, cabeceras o hallazgos interesantes y cuál es el siguiente paso lógico."
