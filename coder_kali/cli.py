@@ -609,6 +609,37 @@ def run_command_line(
     agent.send_message(prompt)
 
 
+@app.command(name="exclude-antivirus", help="🛡️ Agrega la carpeta de Blood-Cipher a las exclusiones de Windows Defender en tiempo real.")
+def exclude_antivirus():
+    """Agrega automáticamente la carpeta actual a las exclusiones de Windows Defender."""
+    import platform
+    if platform.system() != "Windows":
+        console.print("[yellow][!] Este comando está diseñado para sistemas Microsoft Windows.[/yellow]")
+        return
+
+    current_path = Path.cwd().resolve()
+    temp_path = Path(os.environ.get("TEMP", "C:\\Temp")).resolve()
+
+    console.print(Panel(
+        f"[bold cyan]Añadiendo exclusión de Antivirus en tiempo real para:[/bold cyan]\n"
+        f"📁 [bold white]{current_path}[/bold white]\n"
+        f"📁 [bold white]{temp_path}[/bold white]",
+        title="🛡️ EXCLUSIÓN DE ANTIVIRUS (WINDOWS DEFENDER)",
+        border_style="cyan"
+    ))
+
+    cmd = (
+        f'powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '
+        f'\'Add-MpPreference -ExclusionPath \"\"\"{current_path}\"\"\",\"\"\"{temp_path}\"\"\" -Force\'"'
+    )
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+        console.print("[bold green][✓] Solicitud de elevación enviada a Windows Defender.[/bold green]")
+        console.print("[dim]Si aceptaste el aviso de Administrador (UAC), la carpeta ya no será bloqueada ni escaneada por el antivirus.[/dim]")
+    except Exception as e:
+        console.print(f"[bold red][!] Error al configurar exclusión: {e}[/bold red]")
+
+
 @app.command(name="doctor", help="Comprueba el estado del sistema, dependencias y herramientas de seguridad.")
 def doctor():
     """Diagnóstico del entorno y herramientas."""

@@ -85,15 +85,20 @@ class KaliAgent:
 [ENTORNO ANFITRIÓN ACTUAL: MICROSOFT WINDOWS ({os_name} {os_release})]
 - Estás ejecutándote de forma NATIVA sobre el sistema operativo Windows del operador (host físico).
 - Tienes acceso directo al hardware Wi-Fi, adaptadores de red físicos y puertos reales mediante PowerShell y CMD.
-- Para diagnóstico de red y Wi-Fi en Windows, utiliza comandos nativos como:
-  * `netsh wlan show interfaces` (muestra SSID conectado, BSSID, señal %, canal, tipo de radio 802.11ax/ac/n, RX/TX Mbps reales).
-  * `netsh wlan show networks mode=bssid` (escaneo pasivo de todas las redes circundantes y canales).
-  * `Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed` (PowerShell).
-  * `Get-NetAdapterAdvancedProperty -Name "Wi-Fi"` (propiedades avanzadas del driver y chip Wi-Fi).
-  * `Test-NetConnection -ComputerName 8.8.8.8 -InformationLevel Detailed` (latencia, ping y ruta).
-  * `Get-DnsClientServerAddress` / `Resolve-DnsName google.com` (DNS).
-- Para scripts auxiliares en Windows usa Python 3 (`python ...`) o PowerShell (`powershell -Command ...`).
-- Emite tus comandos dentro de `<ejecutar_comando>` y scripts en `<escribir_archivo>`.
+- REGLAS CRÍTICAS PARA SCRIPTS Y COMANDOS EN WINDOWS:
+  1. RUTAS DE ARCHIVOS: Al escribir scripts con `<escribir_archivo>`, usa rutas accesibles como `./script.py`, `./script.ps1` o `$env:TEMP/script.py` y ejecútalos con `python script.py` o `powershell -ExecutionPolicy Bypass -File ./script.ps1`.
+  2. COMPATIBILIDAD POWERSHELL 5.1: Windows 10 usa PowerShell 5.1 por defecto. NO uses `ForEach-Object -Parallel` (solo existe en PS7). Usa bucles estándar `foreach ($ip in $ips)` o scripts multihilo en Python 3 (`ThreadPoolExecutor` o `asyncio`) que son 100% compatibles y ultrarrápidos.
+  3. DESCUBRIMIENTO DE DISPOSITIVOS EN RED LOCAL:
+     - Escaneo rápido de red con Python: un script en Python con `socket` o `ping` resuelve toda la subred /24 en 3 segundos sin ser bloqueado por políticas de PowerShell.
+     - Tabla ARP: `arp -a` y `Get-NetNeighbor` para listar IP, MAC y estado.
+  4. EXCLUSIÓN DE ANTIVIRUS (WINDOWS DEFENDER):
+     - Si el operador necesita añadir exclusión en tiempo real para la carpeta de trabajo:
+       `powershell -Command "Add-MpPreference -ExclusionPath (Get-Location).Path"` (requiere elevación) o `Add-MpPreference -ExclusionPath '$env:TEMP'`
+- Diagnóstico Wi-Fi y red en Windows:
+  * `netsh wlan show interfaces` (SSID conectado, BSSID, señal %, canal, radio 802.11, RX/TX Mbps reales).
+  * `netsh wlan show networks mode=bssid` (mapa de canales, interferencias y redes vecinas).
+  * `Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed`.
+  * `arp -a` (dispositivos vivos en la red local).
 """
             prompt += f"\n\n{os_context}"
         else:
