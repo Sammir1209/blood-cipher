@@ -1528,6 +1528,13 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
             }
 
             let text = rawContent || '';
+            
+            // 0. Limpieza exhaustiva de bloques de razonamiento/pensamiento interno
+            text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+            text = text.replace(/```(?:thought|thinking|reasoning)[\s\S]*?```/gi, '');
+            text = text.replace(/^\s*<think>[\s\S]*$/gi, '');
+            text = text.trim();
+
             const placeholders = {};
             let pIndex = 0;
 
@@ -1546,7 +1553,22 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
                 return `\n\n${key}\n\n`;
             });
 
-            // 2. Extraer comandos XML <ejecutar_comando>
+            // 2. Extraer creación de archivos <escribir_archivo ruta="...">
+            text = text.replace(/<escribir_archivo\s+ruta=(?:"([^"]+)"|'([^']+)'|([^\s>]+))>([\s\S]*?)<\/escribir_archivo>/gi, function(match, p1, p2, p3, content) {
+                const ruta = p1 || p2 || p3 || "script";
+                const key = `%%FILE_BLOCK_${pIndex++}%%`;
+                const cleanContent = content.trim();
+                placeholders[key] = `<div class="plan-card" style="border-color: #00d2ff; background: rgba(0, 210, 255, 0.04);">
+                    <div class="plan-card-header">
+                        <h3 style="color: #00d2ff;"><i class="fa-solid fa-file-code"></i> ARCHIVO GENERADO: ${escapeHtml(ruta)}</h3>
+                        <span class="badge-pill badge-engine" style="border-color: #00d2ff; color: #00d2ff;">SCRIPT LISTO</span>
+                    </div>
+                    <pre style="background: #050811; padding: 12px; border-radius: 8px; border: 1px solid var(--border-light); max-height: 250px; overflow: auto; font-family: var(--font-code); font-size: 0.82rem; color: #f3f4f6;"><code>${escapeHtml(cleanContent)}</code></pre>
+                </div>`;
+                return `\n\n${key}\n\n`;
+            });
+
+            // 3. Extraer comandos XML <ejecutar_comando>
             text = text.replace(/<ejecutar_comando>([\s\S]*?)<\/ejecutar_comando>/g, function(match, cmd) {
                 const key = `%%CMD_BLOCK_${pIndex++}%%`;
                 const cleanCmd = cmd.trim();
@@ -1560,7 +1582,7 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
                 return `\n\n${key}\n\n`;
             });
 
-            // 3. Extraer llamadas JSON crudas (ej: {"cmd": [...]})
+            // 4. Extraer llamadas JSON crudas (ej: {"cmd": [...]})
             text = text.replace(/\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(\[[^\]]*\]|"[^"]*")[^{}]*\}/g, function(match) {
                 try {
                     let parsed = JSON.parse(match);
@@ -1590,7 +1612,7 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
                 return match;
             });
 
-            // 4. Renderizar Markdown con marked.js
+            // 5. Renderizar Markdown con marked.js
             let parsedHtml = '';
             if (typeof marked !== 'undefined') {
                 marked.setOptions({
@@ -1602,7 +1624,7 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
                 parsedHtml = escapeHtml(text).replace(/\n/g, '<br>');
             }
 
-            // 5. Reemplazar los placeholders por sus componentes HTML
+            // 6. Reemplazar los placeholders por sus componentes HTML
             for (const [key, val] of Object.entries(placeholders)) {
                 parsedHtml = parsedHtml.replace(new RegExp(key, 'g'), val);
             }
