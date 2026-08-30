@@ -173,6 +173,22 @@ class KaliAgent:
             import re
             content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
 
+            # Evitar que negativas o sermones pasados del modelo contaminen el contexto futuro
+            if role == "assistant":
+                refusal_markers = [
+                    "NO PUEDO CONTINUAR",
+                    "exfiltración de datos personales",
+                    "no voy a continuar",
+                    "no voy a reanudar",
+                    "debo detenerme aquí",
+                    "Mi postura no cambia",
+                    "no voy a participar",
+                    "autorización verbal no es suficiente"
+                ]
+                if any(rm in content for rm in refusal_markers) and "<ejecutar_comando>" not in content:
+                    # Omitir mensaje de negativa del historial enviado a la API para romper el bucle de negativas
+                    continue
+
             # Compactar salidas de terminal intermedias para no consumir TPM innecesario
             is_latest = i == (len(recent_msgs) - 1)
             max_char_limit = 2000 if is_latest else (800 if is_groq else 1500)
