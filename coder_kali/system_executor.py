@@ -18,6 +18,9 @@ from rich.prompt import Confirm
 from rich.syntax import Syntax
 from rich.text import Text
 
+import shutil
+import tempfile
+
 console = Console()
 
 COMMAND_REGEX = re.compile(r"<ejecutar_comando>(.*?)</ejecutar_comando>", re.DOTALL | re.IGNORECASE)
@@ -67,6 +70,31 @@ class SystemExecutor:
         self.is_linux = self.os_type == "linux"
         self.is_windows = self.os_type == "windows"
         self.is_darwin = self.os_type == "darwin"
+        # Detección inteligente de Termux / Android
+        self.is_termux = bool(
+            os.environ.get("TERMUX_VERSION")
+            or os.environ.get("PREFIX", "").startswith("/data/data/com.termux")
+            or Path("/data/data/com.termux").exists()
+        )
+        self.shell_path = self._resolve_shell_path()
+
+    def _resolve_shell_path(self) -> str:
+        """Determina la ruta absoluta del shell Bash o Shell nativo según la plataforma."""
+        if self.is_windows:
+            return "powershell"
+        if self.is_termux:
+            termux_bash = os.environ.get("PREFIX", "/data/data/com.termux/files/usr") + "/bin/bash"
+            if os.path.exists(termux_bash):
+                return termux_bash
+            termux_sh = os.environ.get("PREFIX", "/data/data/com.termux/files/usr") + "/bin/sh"
+            if os.path.exists(termux_sh):
+                return termux_sh
+        which_bash = shutil.which("bash")
+        if which_bash:
+            return which_bash
+        if os.path.exists("/bin/bash"):
+            return "/bin/bash"
+        return shutil.which("sh") or "/bin/sh"
 
     def parse_actions(self, text: str) -> List[ParsedAction]:
         """Extrae todas las acciones (XML o JSON) en el texto de la IA, priorizando la creación de archivos antes de ejecutar comandos."""
@@ -249,7 +277,7 @@ class SystemExecutor:
         console.print(f"[dim cyan][*] Ejecutando: {cmd}[/dim cyan]")
 
         # Si estamos en Linux y requiere sudo o interactividad
-        if self.is_linux and is_sudo:
+        if self.is_linux and is_sudo and not self.is_termux:
             return self._execute_linux_pty(cmd)
         else:
             return self._execute_standard(cmd)
@@ -259,8 +287,8 @@ class SystemExecutor:
         try:
             import pexpect
 
-            # Ejecutar a través de bash con pty
-            child = pexpect.spawn("/bin/bash", ["-c", cmd], encoding="utf-8", timeout=600)
+            # Ejecutar a través del shell dinámico resuelto
+            child = pexpect.spawn(self.shell_path, ["-c", cmd], encoding="utf-8", timeout=600)
             output_chunks = []
 
             # Dejar que el usuario interactúe directamente si pide contraseña
@@ -292,7 +320,7 @@ class SystemExecutor:
             elif len(full_output) > 20000:
                 total_len = len(full_output)
                 full_output = (
-                    full_output[:10000]
+                    final_output[:10000]
                     + f"\n\n... [Salida muy extensa: {total_len} caracteres detectados. Truncado para preservar contexto de IA] ...\n\n"
                     + full_output[-5000:]
                 )
@@ -315,10 +343,10 @@ class SystemExecutor:
             )
 
     def _execute_standard(self, cmd: str) -> ExecutionResult:
-        """Ejecución estándar mediante subprocess (PowerShell en Windows, Bash en Linux)."""
+        """Ejecución estándar mediante subprocess (PowerShell en Windows, Bash/Sh en Linux y Termux)."""
         try:
             if self.is_linux:
-                shell_cmd = ["/bin/bash", "-c", cmd]
+                shell_cmd = [self.shell_path, "-c", cmd]
                 use_shell = False
             elif self.is_windows:
                 # En Windows ejecutar a través de PowerShell para soportar scripts, netsh, Get-NetAdapter, etc.
@@ -332,14 +360,15 @@ class SystemExecutor:
             is_background = cmd.strip().endswith("&") or "nohup " in cmd or "Start-Process" in cmd or "run_background" in cmd
             
             if is_background and self.is_linux:
-                # Asegurar ejecución limpia en background en Linux redirigiendo logs
-                log_file = "/tmp/blood_cipher_task.log"
+                # Asegurar ejecución limpia en background en Linux/Termux redirigiendo logs a tempfile
+                tmp_dir = tempfile.gettempdir()
+                log_file = os.path.join(tmp_dir, "blood_cipher_task.log")
                 bg_cmd = cmd.strip()
                 if not bg_cmd.endswith("&"):
                     bg_cmd += f" > {log_file} 2>&1 &"
                 clean_cmd = f"nohup {bg_cmd}"
                 process = subprocess.Popen(
-                    ["/bin/bash", "-c", clean_cmd],
+                    [self.shell_path, "-c", clean_cmd],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,

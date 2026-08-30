@@ -24,8 +24,16 @@ BASE_BLACKARCH_TOOLS_URL = "https://blackarch.org/tools.html"
 
 
 def detect_linux_distro() -> Dict[str, str]:
-    """Detecta si el sistema es Kali/Debian o Arch/BlackArch."""
+    """Detecta si el sistema es Termux, Kali/Debian o Arch/BlackArch."""
     info = {"id": "linux", "name": "Linux", "pkg_manager": "apt"}
+
+    # Detección de Termux en Android
+    if os.environ.get("TERMUX_VERSION") or os.environ.get("PREFIX", "").startswith("/data/data/com.termux") or Path("/data/data/com.termux").exists():
+        info["id"] = "termux"
+        info["name"] = "Termux (Android)"
+        info["pkg_manager"] = "pkg"
+        return info
+
     os_release = Path("/etc/os-release")
     if os_release.exists():
         try:

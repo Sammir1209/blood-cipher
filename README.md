@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/Version-v2.0.0-red.svg?style=for-the-badge)](https://github.com/Sammir1209/blood-cipher)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20BlackArch%20%7C%20Arch%20%7C%20Debian%20%7C%20Ubuntu-557C94.svg?style=for-the-badge&logo=linux&logoColor=white)](https://www.kali.org/)
+[![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20BlackArch%20%7C%20Arch%20%7C%20Debian%20%7C%20Termux%20(Android)-557C94.svg?style=for-the-badge&logo=linux&logoColor=white)](https://www.kali.org/)
+[![Termux](https://img.shields.io/badge/Android-Termux%20Native%20Supported-00D97E.svg?style=for-the-badge&logo=android&logoColor=white)](https://termux.dev/)
 [![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Bai%20Chat%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
 [![Web UI](https://img.shields.io/badge/Interface-CLI%20%2B%20Web%20Dashboard%20(Port%207777)-00FF9D.svg?style=for-the-badge)](http://localhost:7777)
 
@@ -66,11 +67,7 @@ Ofrece un centro de mando unificado para operaciones tácticas:
 
 ## [03] Instalación
 
-### Requisitos Previos
-- **Sistema Operativo:** Kali Linux, BlackArch, Debian, Ubuntu, Arch Linux u otra distribución Linux (también compatible con WSL2).
-- **Python:** Versión 3.10 o superior.
-
-### Instalación en un solo paso
+### A. Instalación en Linux (Kali, BlackArch, Debian, Ubuntu, Arch, WSL2)
 
 ```bash
 git clone https://github.com/Sammir1209/blood-cipher.git
@@ -78,10 +75,20 @@ cd blood-cipher
 bash install.sh
 ```
 
-El script de instalación:
-1. Configura un entorno virtual aislado en `~/.local/share/blood-cipher/env`.
-2. Instala todas las dependencias (`rich`, `typer`, `litellm`, `questionary`, etc.).
-3. Crea el ejecutable global `blood-cipher`.
+### B. Instalación en Android (Termux) — One-Liner Oficial
+
+Instala directamente en tu dispositivo móvil con un solo comando:
+
+```bash
+pkg update -y && pkg install -y git curl python && curl -sSL https://raw.githubusercontent.com/Sammir1209/blood-cipher/main/install-termux.sh | bash
+```
+
+O clonando el repositorio localmente en Termux:
+```bash
+git clone https://github.com/Sammir1209/blood-cipher.git
+cd blood-cipher
+bash install-termux.sh
+```
 
 ---
 
