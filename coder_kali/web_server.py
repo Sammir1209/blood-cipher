@@ -1535,6 +1535,10 @@ user:e10adc3949ba59abbe56e057f20f883e" style="flex: 1; min-width: 300px; min-hei
             text = text.replace(/^\s*<think>[\s\S]*$/gi, '');
             text = text.trim();
 
+            // Limpieza de etiquetas XML truncadas o abiertas para que no aparezcan como texto crudo
+            text = text.replace(/<ejecutar_comando>[\s\S]*$/gi, '');
+            text = text.replace(/<escribir_archivo[^>]*>[\s\S]*$/gi, '');
+
             const placeholders = {};
             let pIndex = 0;
 

@@ -107,17 +107,21 @@ def render_ai_message(message: str):
     cleaned_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'^\s*<think>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
     
-    # 2. Filtrar las etiquetas XML de comandos
+    # 2. Filtrar las etiquetas XML de comandos completas o truncadas/abiertas
     raw_for_preview = cleaned_text
-    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', cleaned_text)
-    cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text)
+    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*?</ejecutar_comando>', '', cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*?</escribir_archivo>', '', cleaned_text, flags=re.IGNORECASE)
+    # Limpiar posibles etiquetas no cerradas si la respuesta se truncó
+    cleaned_text = re.sub(r'<ejecutar_comando>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'<escribir_archivo[^>]*>[\s\S]*$', '', cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'</?(?:ejecutar_comando|escribir_archivo)[^>]*>', '', cleaned_text, flags=re.IGNORECASE)
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text).strip()
 
     # 3. Si no hay texto conversacional pero sí hay comandos, extraer un resumen descriptivo
     if not cleaned_text.strip():
-        xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', raw_for_preview, flags=re.IGNORECASE)
+        xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)(?:</ejecutar_comando>|$)', raw_for_preview, flags=re.IGNORECASE)
         if not xml_cmds:
-            xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)</ejecutar_comando>', message, flags=re.IGNORECASE)
+            xml_cmds = re.findall(r'<ejecutar_comando>([\s\S]*?)(?:</ejecutar_comando>|$)', message, flags=re.IGNORECASE)
         if xml_cmds:
             cmd_lines = [c.strip().split('\n')[0] for c in xml_cmds if c.strip()]
             cleaned_text = "⚡ **Ejecutando operaciones tácticas:**\n" + "\n".join([f"- `{cmd}`" for cmd in cmd_lines[:6]])
