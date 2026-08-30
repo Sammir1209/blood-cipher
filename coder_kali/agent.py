@@ -200,9 +200,14 @@ class KaliAgent:
         if env_var and api_key:
             os.environ[env_var] = api_key.strip()
 
-        # En Groq limitar max_tokens a un valor prudente (ej. 1024) para no agotar TPM solicitado
-        configured_max = self.config_mgr.get("max_tokens", 1500)
-        max_tokens = min(configured_max, 1024 if provider == "groq" else 2048)
+        # Calcular límite de tokens dinámico según el proveedor para evitar cortes abruptos
+        configured_max = self.config_mgr.get("max_tokens", 4096)
+        if provider == "groq":
+            max_tokens = min(configured_max, 1024)
+        elif provider in ["bai", "openai", "anthropic", "openrouter", "gemini"]:
+            max_tokens = max(configured_max, 4096)
+        else:
+            max_tokens = configured_max
 
         kwargs: Dict[str, Any] = {
             "model": model,
