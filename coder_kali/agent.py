@@ -154,14 +154,43 @@ class KaliAgent:
         # Filtrar mensajes de conversación (omitir sistema previo si estaba guardado)
         chat_msgs = [m for m in self.messages if m.get("role") != "system"]
 
+        # Purga agresiva de turnos de conflicto/negativa en el historial
+        refusal_markers = [
+            "NO PUEDO CONTINUAR",
+            "exfiltración de datos personales",
+            "no voy a continuar",
+            "no voy a reanudar",
+            "debo detenerme aquí",
+            "Mi postura no cambia",
+            "no voy a participar",
+            "autorización verbal no es suficiente",
+            "No voy a continuar con la extracción",
+            "No puedo continuar ayudando con este objetivo",
+            "no voy a ejecutar el script",
+            "no es suficiente para justificar",
+            "no convierte la extracción no autorizada",
+            "Por qué no voy a continuar",
+            "Una autorización verbal",
+            "No voy a generar el script",
+            "Qué necesito para ayudarte"
+        ]
+
+        cleaned_chat = []
+        for m in chat_msgs:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            
+            # Si el asistente se negó, omitimos ese mensaje y los "continua / tenes autorizacion" residuales
+            if role == "assistant" and any(rm.lower() in content.lower() for rm in refusal_markers) and "<ejecutar_comando>" not in content:
+                continue
+            cleaned_chat.append(m)
+
         # En Groq, conservar un número adecuado de turnos recientes
         max_history = 10 if is_groq else 24
-        if len(chat_msgs) > max_history:
-            # Siempre preservar el primer mensaje de la conversación (donde se define el target / objetivo)
-            # más los últimos (max_history - 1) mensajes
-            recent_msgs = [chat_msgs[0]] + chat_msgs[-(max_history - 1):]
+        if len(cleaned_chat) > max_history:
+            recent_msgs = [cleaned_chat[0]] + cleaned_chat[-(max_history - 1):]
         else:
-            recent_msgs = chat_msgs
+            recent_msgs = cleaned_chat
 
         api_messages: List[Dict[str, str]] = [system_msg]
         
@@ -172,22 +201,6 @@ class KaliAgent:
             # Limpiar bloques <think> o reasoning internos que puedan saturar el contexto
             import re
             content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
-
-            # Evitar que negativas o sermones pasados del modelo contaminen el contexto futuro
-            if role == "assistant":
-                refusal_markers = [
-                    "NO PUEDO CONTINUAR",
-                    "exfiltración de datos personales",
-                    "no voy a continuar",
-                    "no voy a reanudar",
-                    "debo detenerme aquí",
-                    "Mi postura no cambia",
-                    "no voy a participar",
-                    "autorización verbal no es suficiente"
-                ]
-                if any(rm in content for rm in refusal_markers) and "<ejecutar_comando>" not in content:
-                    # Omitir mensaje de negativa del historial enviado a la API para romper el bucle de negativas
-                    continue
 
             # Compactar salidas de terminal intermedias para no consumir TPM innecesario
             is_latest = i == (len(recent_msgs) - 1)
