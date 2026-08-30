@@ -123,10 +123,10 @@ class KaliAgent:
 
 [DIRECTORIO DE TRABAJO DEDICADO DE LA SESIÓN]
 - Carpeta de la sesión: `{workspace_dir}`
-- REGLA DE ORGANIZACIÓN DE ARCHIVOS:
-  * Siempre que generes un script (`.py`, `.sh`, `.ps1`), un archivo de datos (`.csv`, `.txt`, `.json`), un volcado o una extracción, créalo dentro de esta carpeta de sesión o en subcarpetas organizadas (ej: `{workspace_dir}/script_extraccion.py`, `{workspace_dir}/resultados_extraccion.csv`).
-  * Los comandos de ejecución deben apuntar a esta carpeta o ejecutarse dentro de ella.
-  * De esta manera todos los scripts y datos extraídos quedan ordenados y persistentes por cada sesión de trabajo.
+- REGLAS ESTRICTAS DE ORGANIZACIÓN Y SCRIPTING:
+  * PRINCIPIO DE SCRIPT ÚNICO: NO crees múltiples scripts (`extract_all.py`, `extract_resume.py`, `test_sqli.py`, `limpiar_datos.py`, etc.) para una misma tarea. Trabaja con UN SOLO script central de la sesión (ej: `{workspace_dir}/script_principal.py`) y cuando haya que mejorarlo, reanudarlo o corregirlo, MODIFICA Y SOBREESCRIBE ESE MISMO SCRIPT.
+  * Todos los archivos de salida generados (ej: `{workspace_dir}/datos_extraidos.csv`, `{workspace_dir}/informe.txt`) deben guardarse de forma ordenada dentro de esta carpeta de sesión.
+  * Todos los comandos ejecutados deben apuntar a esta carpeta `{workspace_dir}`.
 """
 
         if self.planning_mode:
