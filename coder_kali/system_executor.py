@@ -325,6 +325,31 @@ class SystemExecutor:
                 shell_cmd = cmd
                 use_shell = True
 
+            # Soporte nativo para ejecución en segundo plano (background tasks)
+            is_background = cmd.strip().endswith("&") or "nohup " in cmd or "Start-Process" in cmd or "run_background" in cmd
+            
+            if is_background and self.is_linux:
+                # Asegurar ejecución limpia en background en Linux redirigiendo logs
+                log_file = "/tmp/blood_cipher_task.log"
+                bg_cmd = cmd.strip()
+                if not bg_cmd.endswith("&"):
+                    bg_cmd += f" > {log_file} 2>&1 &"
+                clean_cmd = f"nohup {bg_cmd}"
+                process = subprocess.Popen(
+                    ["/bin/bash", "-c", clean_cmd],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    close_fds=True,
+                )
+                pid_info = process.pid
+                return ExecutionResult(
+                    success=True,
+                    output=f"[⚡ SEGUNDO PLANO ACTIVO] Tarea iniciada en background (PID {pid_info}). Los registros se escriben en '{log_file}'. Puedes seguir conversando con Blood-Cipher libremente mientras el script procesa los datos.",
+                    returncode=0,
+                    command=cmd,
+                )
+
             process = subprocess.Popen(
                 shell_cmd,
                 shell=use_shell,
