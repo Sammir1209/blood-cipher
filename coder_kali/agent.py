@@ -302,11 +302,27 @@ class KaliAgent:
                         kwargs = self._prepare_call_kwargs()
                         response = litellm.completion(**kwargs)
                         choice = response.choices[0]
-                        ai_content = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                        raw_msg = getattr(choice, "message", None)
+                        content_val = getattr(raw_msg, "content", "") if raw_msg else ""
+                        reasoning_val = getattr(raw_msg, "reasoning_content", "") if raw_msg else ""
+                        
+                        ai_content = content_val or ""
+                        if not ai_content and reasoning_val:
+                            ai_content = reasoning_val
+                        
+                        # Limpiar bloques <think> o ```thought solo si queda contenido después de limpiar
                         if ai_content:
                             import re
-                            ai_content = re.sub(r'<think>[\s\S]*?</think>', '', ai_content, flags=re.IGNORECASE).strip()
-                            ai_content = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', ai_content, flags=re.IGNORECASE).strip()
+                            cleaned_attempt = re.sub(r'<think>[\s\S]*?</think>', '', ai_content, flags=re.IGNORECASE).strip()
+                            cleaned_attempt = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_attempt, flags=re.IGNORECASE).strip()
+                            if cleaned_attempt:
+                                ai_content = cleaned_attempt
+                            else:
+                                # Si al limpiar el <think> no quedó nada (el modelo puso todo su output dentro de think)
+                                # extraer el texto dentro de <think> para no perder la respuesta
+                                think_match = re.search(r'<think>([\s\S]*?)</think>', ai_content, flags=re.IGNORECASE)
+                                if think_match:
+                                    ai_content = think_match.group(1).strip()
                         break
                     except ImportError:
                         err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"
@@ -414,12 +430,13 @@ class KaliAgent:
                 actions = self.executor.parse_actions(clean_content)
 
             # 4. Renderizar la respuesta del modelo (si hay contenido visible o comandos)
-            if clean_content or actions:
-                render_ai_message(clean_content if clean_content else ai_content)
+            display_text = clean_content if clean_content else ai_content
+            if display_text or actions:
+                render_ai_message(display_text)
                 self.messages.append({"role": "assistant", "content": ai_content})
-                final_response = ai_content
+                final_response = display_text
             else:
-                # Modelo solo generó think tags sin contenido útil - no guardar ni renderizar
+                render_ai_message("No se recibió texto descriptivo del modelo. Continuando...")
                 break
 
             if not actions:
