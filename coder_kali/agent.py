@@ -63,7 +63,9 @@ class KaliAgent:
             loaded_sess = self.session_mgr.get_session(session_id)
             if loaded_sess:
                 self.current_session = loaded_sess
-                self.messages = list(loaded_sess.messages) if loaded_sess.messages else [{"role": "system", "content": self._get_effective_system_prompt()}]
+                # Reconstruir los mensajes asegurando que el system prompt contenga el workspace y contexto actualizado
+                non_system_msgs = [m for m in loaded_sess.messages if m.get("role") != "system"]
+                self.messages = [{"role": "system", "content": self._get_effective_system_prompt()}] + non_system_msgs
             else:
                 self.current_session = self.session_mgr.create_session(provider, model)
                 self.reset_conversation()
