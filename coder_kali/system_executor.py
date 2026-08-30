@@ -28,13 +28,13 @@ FILE_REGEX = re.compile(
 
 # Comandos de alto riesgo que requieren advertencia especial
 CRITICAL_PATTERNS = [
-    r"\brm\s+-[rf]*\s+/",
+    r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\s+(?:/[a-zA-Z0-9_\.]*\s*$|/\s*$|/\*)",  # rm -rf / o rm -rf /*
     r"\bmkfs\b",
-    r"\bdd\s+if=",
-    r">\s*/dev/sd",
-    r":\(\)\{\s*:\|:&\s*\};:", # fork bomb
-    r"\bchmod\s+-R\s+777\s+/",
-    r"\bchown\s+-R\s+.*?\s+/",
+    r"\bdd\s+if=.*of=/dev/sd",
+    r">\s*/dev/sd[a-z]",
+    r":\(\)\{\s*:\|:&\s*\};:",  # fork bomb
+    r"\bchmod\s+-R\s+777\s+/(?:$|\s)",
+    r"\bchown\s+-R\s+.*?\s+/(?:$|\s)",
 ]
 
 
