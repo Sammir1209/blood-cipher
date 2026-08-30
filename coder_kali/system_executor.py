@@ -69,15 +69,31 @@ class SystemExecutor:
         self.is_darwin = self.os_type == "darwin"
 
     def parse_actions(self, text: str) -> List[ParsedAction]:
-        """Extrae todas las acciones (XML o JSON) en el texto de la IA en orden de aparición."""
+        """Extrae todas las acciones (XML o JSON) en el texto de la IA, priorizando la creación de archivos antes de ejecutar comandos."""
         actions: List[ParsedAction] = []
+        file_actions: List[ParsedAction] = []
+        cmd_actions: List[ParsedAction] = []
         seen_commands = set()
 
         # Limpiar texto de bloques de pensamiento que puedan tener XML falso o comillas abiertas
         cleaned_text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE)
         cleaned_text = re.sub(r'```(?:thought|thinking|reasoning)[\s\S]*?```', '', cleaned_text, flags=re.IGNORECASE)
 
-        # 1. Buscar comandos en etiquetas XML estándar <ejecutar_comando>
+        # 1. Buscar creación de archivos <escribir_archivo> PRIMERO (para que siempre existan antes de ejecutar cualquier comando)
+        for match in FILE_REGEX.finditer(cleaned_text):
+            path = match.group(1) or match.group(2) or match.group(3)
+            file_content = match.group(4)
+            if file_content.startswith("\n"):
+                file_content = file_content[1:]
+            file_actions.append(
+                ParsedAction(
+                    action_type="file",
+                    content=file_content,
+                    target_path=path.strip(),
+                )
+            )
+
+        # 2. Buscar comandos en etiquetas XML estándar <ejecutar_comando>
         for match in COMMAND_REGEX.finditer(cleaned_text):
             raw_cmd = match.group(1).strip()
             if not raw_cmd:
@@ -122,7 +138,7 @@ class SystemExecutor:
             seen_commands.add(final_cmd)
             is_sudo = bool(re.search(r"\bsudo\b", final_cmd))
             is_dangerous = any(re.search(pat, final_cmd) for pat in CRITICAL_PATTERNS)
-            actions.append(
+            cmd_actions.append(
                 ParsedAction(
                     action_type="command",
                     content=final_cmd,
@@ -131,9 +147,9 @@ class SystemExecutor:
                 )
             )
 
-        # 2. Buscar comandos en formato JSON emitidos por modelos OSS / Groq (ej: {"cmd": ["bash", "-lc", "..."]})
+        # 3. Buscar comandos en formato JSON emitidos por modelos OSS / Groq
         json_cmd_regex = re.compile(r'\{[^{}]*"(?:cmd|command|bash|exec)"\s*:\s*(?:\[[^\]]*\]|"[^"]*")[^{}]*\}', re.DOTALL)
-        for match in json_cmd_regex.finditer(text):
+        for match in json_cmd_regex.finditer(cleaned_text):
             try:
                 raw_json = match.group(0)
                 data = json.loads(raw_json)
@@ -152,7 +168,7 @@ class SystemExecutor:
                     seen_commands.add(cmd_str)
                     is_sudo = bool(re.search(r"\bsudo\b", cmd_str))
                     is_dangerous = any(re.search(pat, cmd_str) for pat in CRITICAL_PATTERNS)
-                    actions.append(
+                    cmd_actions.append(
                         ParsedAction(
                             action_type="command",
                             content=cmd_str,
@@ -163,21 +179,8 @@ class SystemExecutor:
             except Exception:
                 continue
 
-        # 3. Buscar creación de archivos <escribir_archivo>
-        for match in FILE_REGEX.finditer(text):
-            path = match.group(1) or match.group(2) or match.group(3)
-            file_content = match.group(4)
-            if file_content.startswith("\n"):
-                file_content = file_content[1:]
-            actions.append(
-                ParsedAction(
-                    action_type="file",
-                    content=file_content,
-                    target_path=path.strip(),
-                )
-            )
-
-        return actions
+        # SIEMPRE retornar primero la creación de archivos y luego los comandos
+        return file_actions + cmd_actions
 
     def has_actions(self, text: str) -> bool:
         return bool(COMMAND_REGEX.search(text) or FILE_REGEX.search(text))
