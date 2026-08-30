@@ -410,7 +410,7 @@ class KaliAgent:
 
             # 4. Renderizar la respuesta del modelo (si hay contenido visible o comandos)
             if clean_content or actions:
-                render_ai_message(ai_content)
+                render_ai_message(clean_content if clean_content else ai_content)
                 self.messages.append({"role": "assistant", "content": ai_content})
                 final_response = ai_content
             else:
