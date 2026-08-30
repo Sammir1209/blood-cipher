@@ -35,7 +35,7 @@ BANNER_ART_WINDOWS = r"""
 """
 
 
-def print_banner(version: str = "2.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None, key_pool_size: int = 1):
+def print_banner(version: str = "2.0.0", provider: str = "gemini", model: str = "gemini-2.0-flash", scope: Optional[str] = None, key_pool_size: int = 1, workspace: Optional[str] = None):
     """Imprime el banner temático adaptado para Windows o Linux."""
     import platform
     is_windows = platform.system() == "Windows"
@@ -61,6 +61,8 @@ def print_banner(version: str = "2.0.0", provider: str = "gemini", model: str = 
         provider_str += f"  [bold green]🔄 {key_pool_size} API Keys en rotación[/bold green]"
     info_table.add_row("🤖 Proveedor IA:", provider_str)
     info_table.add_row("🧠 Modelo Activo:", f"[yellow]{model}[/yellow]")
+    if workspace:
+        info_table.add_row("📂 Workspace Sesión:", f"[cyan]{workspace}[/cyan]")
     info_table.add_row("🎯 Alcance / SOW:", f"[bold green]{scope}[/bold green]" if scope else "[dim]No definido ('scope' para cargar)[/dim]")
     info_table.add_row("🛡️  Modo de Shell:", "[bold cyan]PowerShell 5.1/7+ Seguro[/bold cyan]" if is_windows else "[green]Supervisión PTY Activa (sudo)[/green]")
     info_table.add_row("💡 Comandos Rápidos:", "[dim]escribe 'exit', 'scope', 'config', 'clear' o 'ayuda'[/dim]")

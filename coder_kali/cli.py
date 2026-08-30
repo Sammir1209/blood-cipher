@@ -356,20 +356,20 @@ def chat(
     if not new_session:
         selected_session_id = prompt_session_selection(session_mgr)
 
+    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=selected_session_id)
+
     provider = config_mgr.get_active_provider()
     model = config_mgr.get_active_model()
     active_scope_name = scope_mgr.get_active_scope_name()
     key_pool_size = config_mgr.get_api_key_count(provider)
-    print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size)
-
-    agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr, session_id=selected_session_id)
+    workspace_path = getattr(agent.current_session, "workspace_path", None)
+    print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size, workspace=workspace_path)
 
     if selected_session_id and agent.current_session:
         user_msgs = [m for m in agent.messages if m.get("role") == "user" and not m.get("content", "").startswith("[RESULTADOS_SISTEMA")]
         console.print(f"[bold green][✓] Sesión reanudada:[/bold green] [bold white]'{agent.current_session.title}'[/bold white] [dim]({len(user_msgs)} turnos en memoria táctica)[/dim]\n")
         
         # Renderizar los últimos mensajes visibles para contexto visual inmediato
-        # Filtrar mensajes internos del sistema (feedback de terminal, prompts de síntesis, etc.)
         _internal_prefixes = ("[RESULTADOS_SISTEMA", "Interpreta los resultados", "Interpreta ahora", "Analiza estos resultados", "Presenta tu resumen")
         visible_msgs = [
             m for m in agent.messages 
@@ -397,7 +397,8 @@ def chat(
                 model = config_mgr.get_active_model()
                 active_scope_name = scope_mgr.get_active_scope_name()
                 key_pool_size = config_mgr.get_api_key_count(provider)
-                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size)
+                workspace_path = getattr(agent.current_session, "workspace_path", None)
+                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, key_pool_size=key_pool_size, workspace=workspace_path)
                 continue
             elif cleaned_cmd in ["exit", "quit", "salir", "q"]:
                 console.print("[bold cyan]Hasta pronto, operador. Tu sesión quedó guardada en el historial.[/bold cyan]")
@@ -405,11 +406,13 @@ def chat(
             elif cleaned_cmd in ["clear", "cls", "limpiar"]:
                 os.system("clear" if os.name != "nt" else "cls")
                 active_scope_name = scope_mgr.get_active_scope_name()
-                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name)
+                workspace_path = getattr(agent.current_session, "workspace_path", None)
+                print_banner(version=__version__, provider=provider, model=model, scope=active_scope_name, workspace=workspace_path)
                 continue
             elif cleaned_cmd in ["new", "nuevo", "reset", "reiniciar"]:
                 agent = KaliAgent(config_mgr=config_mgr, session_mgr=session_mgr, scope_mgr=scope_mgr)
-                console.print("[bold green][✓] Nueva sesión iniciada (historial anterior guardado).[/bold green]")
+                workspace_path = getattr(agent.current_session, "workspace_path", None)
+                console.print(f"[bold green][✓] Nueva sesión iniciada:[/bold green] [dim]{workspace_path}[/dim]")
                 continue
             elif cleaned_cmd in ["historial", "history", "sesiones"]:
                 sid = prompt_session_selection(session_mgr)

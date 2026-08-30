@@ -111,6 +111,22 @@ class KaliAgent:
         active_scope = self.scope_mgr.get_active_scope_content()
         if active_scope:
             prompt += f"\n\n[CONTEXTO OPERATIVO / OBJETIVO]\n{active_scope}"
+
+        # Inyectar la carpeta de trabajo dedicada y aislada de la sesión actual
+        workspace_dir = getattr(self.current_session, "workspace_path", None)
+        if not workspace_dir:
+            workspace_dir = str(self.session_mgr.get_session_workspace(self.current_session.id))
+        
+        prompt += f"""
+
+[DIRECTORIO DE TRABAJO DEDICADO DE LA SESIÓN]
+- Carpeta de la sesión: `{workspace_dir}`
+- REGLA DE ORGANIZACIÓN DE ARCHIVOS:
+  * Siempre que generes un script (`.py`, `.sh`, `.ps1`), un archivo de datos (`.csv`, `.txt`, `.json`), un volcado o una extracción, créalo dentro de esta carpeta de sesión o en subcarpetas organizadas (ej: `{workspace_dir}/script_extraccion.py`, `{workspace_dir}/resultados_extraccion.csv`).
+  * Los comandos de ejecución deben apuntar a esta carpeta o ejecutarse dentro de ella.
+  * De esta manera todos los scripts y datos extraídos quedan ordenados y persistentes por cada sesión de trabajo.
+"""
+
         if self.planning_mode:
             prompt += f"\n\n{PROMPT_PLANNING_MODE}"
         return prompt
