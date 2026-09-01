@@ -601,8 +601,8 @@ class KaliAgent:
                 console.print("[yellow][*] Secuencia detenida debido a que el operador rechazó una acción.[/yellow]")
                 break
 
-        # Turno de análisis e interpretación interactiva de resultados para el operador
-        if results_feedback and not should_stop:
+        # Turno de análisis e interpretación interactiva solo si el modelo no dio un análisis detallado
+        if results_feedback and not should_stop and len(final_response) < 150:
             if self.on_status_update:
                 try:
                     self.on_status_update("Interpretando y estructurando reporte táctico final...")
@@ -610,17 +610,17 @@ class KaliAgent:
                     pass
 
             synth_prompt = (
-                "Interpreta los resultados obtenidos de la terminal de forma detallada e interactiva. "
-                "Destaca al operador las tecnologías, infraestructura, cabeceras o hallazgos interesantes y cuál es el siguiente paso lógico."
+                "Resume los resultados obtenidos de la terminal de forma breve y técnica en 2 o 3 líneas "
+                "y formula directamente el comando de la siguiente fase."
             )
             self.messages.append({"role": "user", "content": synth_prompt})
 
-            # Compactar historial agresivamente para la síntesis (conservar system + últimos 4 msgs)
+            # Compactar historial para la síntesis (conservar system + últimos 3 msgs)
             synth_messages = [self.messages[0]]  # system prompt
-            synth_messages += self.messages[-4:]  # últimos mensajes (feedback + synth prompt)
+            synth_messages += self.messages[-3:]  # últimos mensajes
 
             synth_text = ""
-            synth_retries = 3
+            synth_retries = 2
             for synth_attempt in range(synth_retries):
                 with console.status(f"[bold cyan]Blood-Cipher analizando hallazgos de terminal...{'(reintento)' if synth_attempt > 0 else ''}[/bold cyan]", spinner="dots"):
                     try:
@@ -640,9 +640,9 @@ class KaliAgent:
                         else:
                             import litellm
                             litellm.drop_params = True
-                            # Usar mensajes compactados para la síntesis
                             synth_kwargs = self._prepare_call_kwargs()
                             synth_kwargs["messages"] = synth_messages
+                            synth_kwargs["max_tokens"] = 512
                             res = litellm.completion(**synth_kwargs)
                             choice = res.choices[0]
                             synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
@@ -652,7 +652,6 @@ class KaliAgent:
                         err_str = str(e)
                         is_rate_limit = "rate" in err_str.lower() or "429" in err_str or "tpm" in err_str.lower() or "RateLimitError" in err_str
                         if is_rate_limit and synth_attempt < synth_retries - 1:
-                            # Intentar rotar key si hay pool (max 1 ciclo)
                             key_count = self.config_mgr.get_api_key_count(provider)
                             if not hasattr(self, '_synth_rotation'):
                                 self._synth_rotation = 0
@@ -667,16 +666,15 @@ class KaliAgent:
                                 continue
                             self._synth_rotation = 0
                             import re as _re
-                            wait = 15 + (synth_attempt * 8)
+                            wait = 12 + (synth_attempt * 6)
                             match = _re.search(r'(?:retry in|try again in\s+)(\d+(?:\.\d+)?)s?', err_str, _re.IGNORECASE)
                             if match:
                                 wait = max(int(float(match.group(1))) + 2, 10)
-                            console.print(f"[yellow][!] Rate limit en síntesis, esperando {wait}s (intento {synth_attempt+1}/{synth_retries})...[/yellow]")
+                            console.print(f"[yellow][!] Rate limit en síntesis, esperando {wait}s...[/yellow]")
                             import time
                             time.sleep(wait)
                             continue
                         else:
-                            console.print(f"[yellow][!] No se pudo generar el análisis automático. Escribe 'continua' para que lo reintente.[/yellow]")
                             break
 
             if synth_text:
