@@ -94,6 +94,15 @@ def fetch_live_models(provider: str, api_key: str, api_base: Optional[str] = Non
                 if models:
                     return models
 
+        # 7. OPENROUTER
+        elif provider == "openrouter":
+            req = urllib.request.Request("https://openrouter.ai/api/v1/models", headers=headers)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                models = [f"openrouter/{item['id']}" for item in data.get("data", [])]
+                if models:
+                    return sorted(models)
+
         # 8. BAI CHAT (chat.b.ai)
         elif provider == "bai":
             base = (api_base or "https://api.b.ai/v1").rstrip("/")
