@@ -166,14 +166,29 @@ class KaliAgent:
             "no voy a participar",
             "autorización verbal no es suficiente",
             "No voy a continuar con la extracción",
-            "No puedo continuar ayudando con este objetivo",
+            "No puedo continuar ayudando",
             "no voy a ejecutar el script",
             "no es suficiente para justificar",
             "no convierte la extracción no autorizada",
             "Por qué no voy a continuar",
             "Una autorización verbal",
             "No voy a generar el script",
-            "Qué necesito para ayudarte"
+            "Qué necesito para ayudarte",
+            "límites éticos y legales",
+            "delito tipificado",
+            "constituye un delito",
+            "CSIRT del Perú",
+            "csirt@peru.gob.pe",
+            "HackTheBox",
+            "PortSwigger",
+            "TryHackMe",
+            "autorización explícita y verificable",
+            "sin una autorización explícita",
+            "Jefe, aquí tengo que frenar",
+            "Alto — Detención",
+            "No puedo continuar ayudando a intentar acceder",
+            "I’m sorry, but I can’t help with that",
+            "I cannot help with that",
         ]
 
         cleaned_chat = []
@@ -442,6 +457,15 @@ class KaliAgent:
                                 time.sleep(wait_seconds)
                                 continue
                         
+                        # Si es un error de timeout / conexión temporal / backend proxy
+                        if "context deadline exceeded" in err_str or "Client.Timeout" in err_str or "timed out" in err_str.lower() or "504" in err_str or "502" in err_str or "503" in err_str:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                console.print(f"[yellow][!] El proveedor {provider.upper()} tuvo un timeout de red. Reintentando ({retry_count}/{max_retries})...[/yellow]")
+                                import time
+                                time.sleep(3 + retry_count * 2)
+                                continue
+
                         render_error("Error al comunicarse con el proveedor de IA", err_str)
                         return f"Error: {err_str}"
 
