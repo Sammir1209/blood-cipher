@@ -438,22 +438,28 @@ class KaliAgent:
                                 self.config_mgr.rotate_api_key(provider)
                                 new_idx = self.config_mgr.get_current_key_index(provider)
                                 self._rotation_count += 1
-                                console.print(f"[bold cyan][🔄] {provider.upper()}: Key #{old_idx+1} con límite → Rotando a Key #{new_idx+1} de {key_count}[/bold cyan]")
-                                continue  # Reintentar inmediatamente con la nueva key del pool
+                                
+                                # Pausa prudente y controlada antes de usar la siguiente key (evita quemar el pool en 3 segundos)
+                                rotation_pause = 4
+                                console.print(f"[bold cyan][🔄] {provider.upper()}: Key #{old_idx+1} saturada. Pausando {rotation_pause}s antes de conectar Key #{new_idx+1} de {key_count}...[/bold cyan]")
+                                import time
+                                time.sleep(rotation_pause)
+                                continue  # Reintentar con la nueva key tras la pausa estabilizadora
 
                             # Todas las keys agotadas o solo hay una: esperar con backoff
                             if key_count > 1:
-                                console.print(f"[yellow][!] Todas las {key_count} keys de {provider.upper()} agotadas. Esperando cooldown...[/yellow]")
+                                console.print(f"[yellow][!] Todas las {key_count} keys de {provider.upper()} alcanzaron límite temporal. Esperando cooldown global...[/yellow]")
                                 self._rotation_count = 0  # Reset para el siguiente ciclo
 
                             if retry_count < max_retries:
-                                wait_seconds = 15 + (retry_count * 5)
+                                wait_seconds = 18 + (retry_count * 6)
                                 import re
                                 match = re.search(r"(?:retry in|retryDelay[\"':\s]+|try again in\s+|retryDelay\":\s*\"?)(\d+(?:\.\d+)?)s?", err_str, re.IGNORECASE)
                                 if match:
-                                    wait_seconds = max(int(float(match.group(1))) + 2, 5)
+                                    wait_seconds = max(int(float(match.group(1))) + 3, 8)
 
-                                console.print(f"[yellow][!] Límite de tasa en {provider.upper()}. Esperando {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
+                                console.print(f"[yellow][!] Límite de tasa en {provider.upper()}. Esperando cooldown de {wait_seconds}s (Reintento {retry_count}/{max_retries})...[/yellow]")
+                                import time
                                 time.sleep(wait_seconds)
                                 continue
                         
@@ -630,7 +636,9 @@ class KaliAgent:
                                 self.config_mgr.rotate_api_key(provider)
                                 new_idx = self.config_mgr.get_current_key_index(provider)
                                 self._synth_rotation += 1
-                                console.print(f"[bold cyan][🔄] Síntesis: Key #{old_idx+1} → #{new_idx+1}[/bold cyan]")
+                                console.print(f"[bold cyan][🔄] Síntesis: Key #{old_idx+1} saturada. Pausando 4s antes de Key #{new_idx+1}...[/bold cyan]")
+                                import time
+                                time.sleep(4)
                                 continue
                             self._synth_rotation = 0
                             import re as _re
