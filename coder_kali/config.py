@@ -231,6 +231,26 @@ DEFAULT_PROVIDERS = {
         "env_var": "OPENROUTER_API_KEY",
         "requires_api_key": True,
     },
+    "aimlapi": {
+        "name": "AIML API (aimlapi.com - 300+ Modelos de IA)",
+        "default_model": "openai/deepseek-ai/DeepSeek-R1",
+        "available_models": [
+            "openai/deepseek-ai/DeepSeek-R1",
+            "openai/deepseek-ai/DeepSeek-V3",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "openai/o1-mini",
+            "openai/o3-mini",
+            "openai/claude-3-5-sonnet-20241022",
+            "openai/claude-3-5-haiku-20241022",
+            "openai/meta-llama/Llama-3.3-70B-Instruct",
+            "openai/Qwen/Qwen2.5-Coder-32B-Instruct",
+            "openai/mistralai/Mistral-Large-2407",
+        ],
+        "env_var": "AIMLAPI_API_KEY",
+        "requires_api_key": True,
+        "default_api_base": "https://api.aimlapi.com/v1",
+    },
 }
 
 DEFAULT_CONFIG: Dict[str, Any] = {

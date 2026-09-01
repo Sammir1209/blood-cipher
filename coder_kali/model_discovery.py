@@ -113,6 +113,16 @@ def fetch_live_models(provider: str, api_key: str, api_base: Optional[str] = Non
                 if models:
                     return sorted(models)
 
+        # 9. AIML API (aimlapi.com)
+        elif provider == "aimlapi":
+            base = (api_base or "https://api.aimlapi.com/v1").rstrip("/")
+            req = urllib.request.Request(f"{base}/models", headers=headers)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                models = [f"openai/{item['id']}" for item in data.get("data", [])]
+                if models:
+                    return sorted(models)
+
     except Exception:
         pass
 
