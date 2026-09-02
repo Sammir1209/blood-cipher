@@ -471,7 +471,12 @@ class ConfigManager:
 
     def get_api_base(self, provider: Optional[str] = None) -> Optional[str]:
         prov = provider or self.get_active_provider()
-        return self.config.get("api_bases", {}).get(prov)
+        base = self.config.get("api_bases", {}).get(prov)
+        if base:
+            base = base.strip().rstrip("/")
+            if base.endswith("/chat/completions"):
+                base = base[:-len("/chat/completions")].rstrip("/")
+        return base
 
     def is_configured(self) -> bool:
         provider = self.get_active_provider()

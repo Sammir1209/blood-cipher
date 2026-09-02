@@ -509,7 +509,9 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
                 if api_base_input is None:
                     return False
                 if api_base_input:
-                    api_base = api_base_input.strip()
+                    api_base = api_base_input.strip().rstrip("/")
+                    if api_base.endswith("/chat/completions"):
+                        api_base = api_base[:-len("/chat/completions")].rstrip("/")
                     if "api_bases" not in config_mgr.config:
                         config_mgr.config["api_bases"] = {}
                     config_mgr.config["api_bases"][chosen_provider] = api_base
@@ -525,10 +527,13 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
             if api_base_input is None:
                 return False
             if api_base_input:
+                base_clean = api_base_input.strip().rstrip("/")
+                if base_clean.endswith("/chat/completions"):
+                    base_clean = base_clean[:-len("/chat/completions")].rstrip("/")
                 if "api_bases" not in config_mgr.config:
                     config_mgr.config["api_bases"] = {}
-                config_mgr.config["api_bases"][chosen_provider] = api_base_input.strip()
-                api_base = api_base_input.strip()
+                config_mgr.config["api_bases"][chosen_provider] = base_clean
+                api_base = base_clean
 
         # 3. Consultar modelos activos en vivo desde la API del proveedor
         live_models = []
@@ -561,11 +566,23 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
         if chosen_model.startswith("Personalizado"):
             custom_model = questionary.text(
-                "Ingresa el identificador exacto del modelo (ej. groq/qwen/qwen3.6-27b, gemini/gemini-2.5-flash):",
+                "Ingresa el identificador exacto del modelo (ej. openai/deepseek-chat, groq/llama-3.3-70b-versatile):",
                 default=prov_meta["default_model"],
             ).ask()
             if custom_model:
                 chosen_model = custom_model.strip()
+                # Asegurar prefijo compatible con litellm si el usuario no puso '/'
+                if "/" not in chosen_model:
+                    if chosen_provider in ["bai", "aimlapi"]:
+                        chosen_model = f"openai/{chosen_model}"
+                    elif chosen_provider == "groq":
+                        chosen_model = f"groq/{chosen_model}"
+                    elif chosen_provider == "openrouter":
+                        chosen_model = f"openrouter/{chosen_model}"
+                    elif chosen_provider == "ollama":
+                        chosen_model = f"ollama/{chosen_model}"
+                    elif chosen_provider == "gemini":
+                        chosen_model = f"gemini/{chosen_model}"
             else:
                 chosen_model = prov_meta["default_model"]
 
