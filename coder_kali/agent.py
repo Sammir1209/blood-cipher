@@ -321,40 +321,30 @@ class KaliAgent:
                     try:
                         provider = self.config_mgr.get_active_provider()
                         model = self.config_mgr.get_active_model()
-
-                        # Fast-Path: Inferencia directa ultrarrápida si el modelo es Ollama
-                        if provider == "ollama":
-                            from coder_kali.fast_engine import OllamaFastClient
-                            api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
-                            ollama_client = OllamaFastClient(host=api_base)
-                            res = ollama_client.chat_completion(
-                                model=model,
-                                messages=self._get_api_messages(),
-                                temperature=self.config_mgr.get("temperature", 0.2),
-                                timeout=300,
-                            )
-                            if "content" in res and res["content"]:
-                                ai_content = res["content"]
-                                break
-                            elif "error" in res:
-                                render_error("Error de Inferencia Ollama", res["error"])
-                                return f"Error al comunicar con Ollama: {res['error']}"
-
-                        import litellm
-                        import time
-                        litellm.suppress_debug_info = True
-                        litellm.drop_params = True
-                        kwargs = self._prepare_call_kwargs()
-                        response = litellm.completion(**kwargs)
-                        choice = response.choices[0]
-                        raw_msg = getattr(choice, "message", None)
-                        content_val = getattr(raw_msg, "content", "") if raw_msg else ""
-                        reasoning_val = getattr(raw_msg, "reasoning_content", "") if raw_msg else ""
                         
-                        ai_content = content_val or ""
-                        if not ai_content and reasoning_val:
-                            ai_content = reasoning_val
-                        
+                        from coder_kali.providers.factory import get_provider
+                        driver = get_provider(provider, self.config_mgr)
+
+                        configured_max = self.config_mgr.get("max_tokens", 4096)
+                        if provider == "groq":
+                            max_tokens = min(configured_max, 1024)
+                        elif provider in ["bai", "aimlapi", "openai", "anthropic", "openrouter", "gemini"]:
+                            max_tokens = max(configured_max, 4096)
+                        else:
+                            max_tokens = configured_max
+
+                        resp = driver.chat_completion(
+                            model=model,
+                            messages=self._get_api_messages(),
+                            temperature=self.config_mgr.get("temperature", 0.2),
+                            max_tokens=max_tokens,
+                        )
+
+                        if not resp.success:
+                            raise RuntimeError(resp.error or f"Fallo de inferencia en {provider.upper()}")
+
+                        ai_content = resp.content or resp.reasoning_content or ""
+
                         # Limpiar bloques <think> o ```thought solo si queda contenido después de limpiar
                         if ai_content:
                             import re
@@ -363,14 +353,12 @@ class KaliAgent:
                             if cleaned_attempt:
                                 ai_content = cleaned_attempt
                             else:
-                                # Si al limpiar el <think> no quedó nada (el modelo puso todo su output dentro de think)
-                                # extraer el texto dentro de <think> para no perder la respuesta
                                 think_match = re.search(r'<think>([\s\S]*?)</think>', ai_content, flags=re.IGNORECASE)
                                 if think_match:
                                     ai_content = think_match.group(1).strip()
                         break
                     except ImportError:
-                        err_msg = "El paquete 'litellm' no está instalado. Ejecuta: pip install -r requirements.txt"
+                        err_msg = "Error al importar el proveedor de IA."
                         render_error("Dependencia faltante", err_msg)
                         return f"Error: {err_msg}"
                     except Exception as e:
@@ -626,26 +614,17 @@ class KaliAgent:
                     try:
                         provider = self.config_mgr.get_active_provider()
                         model = self.config_mgr.get_active_model()
-                        if provider == "ollama":
-                            from coder_kali.fast_engine import OllamaFastClient
-                            api_base = self.config_mgr.get_api_base(provider) or "http://localhost:11434"
-                            ollama_client = OllamaFastClient(host=api_base)
-                            res = ollama_client.chat_completion(
-                                model=model,
-                                messages=synth_messages,
-                                temperature=self.config_mgr.get("temperature", 0.2),
-                                timeout=180,
-                            )
-                            synth_text = res.get("content", "")
-                        else:
-                            import litellm
-                            litellm.drop_params = True
-                            synth_kwargs = self._prepare_call_kwargs()
-                            synth_kwargs["messages"] = synth_messages
-                            synth_kwargs["max_tokens"] = 512
-                            res = litellm.completion(**synth_kwargs)
-                            choice = res.choices[0]
-                            synth_text = getattr(choice.message, "content", "") or getattr(choice.message, "reasoning_content", "") or ""
+                        from coder_kali.providers.factory import get_provider
+                        driver = get_provider(provider, self.config_mgr)
+                        res = driver.chat_completion(
+                            model=model,
+                            messages=synth_messages,
+                            temperature=self.config_mgr.get("temperature", 0.2),
+                            max_tokens=512,
+                        )
+                        if not res.success:
+                            raise RuntimeError(res.error or "Fallo en síntesis")
+                        synth_text = res.content or res.reasoning_content or ""
                         break  # Éxito, salir del retry
 
                     except Exception as e:

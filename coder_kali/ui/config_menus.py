@@ -607,68 +607,24 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
 
 
 def test_provider_connection(config_mgr: ConfigManager) -> bool:
-    """Prueba la conexión con el modelo configurado mediante LiteLLM."""
-    import litellm
-    from rich.status import Status
+    """Prueba la conexión con el modelo configurado mediante el driver independiente del proveedor."""
+    from coder_kali.providers.factory import get_provider
 
-    provider = config_mgr.get_active_provider()
+    provider_name = config_mgr.get_active_provider()
     model = config_mgr.get_active_model()
-    api_key = config_mgr.get_api_key(provider)
-    api_base = config_mgr.get_api_base(provider)
-
-    # Sincronizar variable de entorno para librerías subyacentes
-    env_var = DEFAULT_PROVIDERS.get(provider, {}).get("env_var")
-    if env_var and api_key:
-        os.environ[env_var] = api_key.strip()
 
     console.print()
-    with console.status(f"[bold cyan]Probando comunicación con {model}...[/bold cyan]", spinner="dots"):
+    with console.status(f"[bold cyan]Probando comunicación con {model} ({provider_name.upper()})...[/bold cyan]", spinner="dots"):
         try:
-            if provider == "ollama":
-                from coder_kali.fast_engine import OllamaFastClient
-                fast_client = OllamaFastClient(host=api_base or "http://localhost:11434")
-                if not fast_client.is_online():
-                    console.print("[bold red][✗] El servicio de Ollama no está activo en http://localhost:11434.[/bold red]")
-                    console.print("[dim]Inicia el servicio ejecutando: 'ollama serve' o 'sudo systemctl start ollama'.[/dim]")
-                    return False
-
-                res = fast_client.chat_completion(
-                    model=model,
-                    messages=[{"role": "user", "content": "Responde únicamente 'OK'"}],
-                    timeout=180,
-                )
-                if "error" in res:
-                    console.print(f"[bold red][✗] Error de Ollama:[/bold red] {res['error']}")
-                    return False
-                reply = res.get("content", "OK (Conexión establecida)").strip()
-                console.print(f"[bold green][✓] Test exitoso. Respuesta del modelo:[/bold green] [white]{reply}[/white]")
+            driver = get_provider(provider_name, config_mgr)
+            success, msg = driver.test_connection(model)
+            if success:
+                console.print(f"[bold green][✓] {msg}[/bold green]")
                 return True
-
-            kwargs = {
-                "model": model,
-                "messages": [{"role": "user", "content": "Responde únicamente 'OK'"}],
-                "max_tokens": 50,
-            }
-            if api_key:
-                clean_k = api_key.strip()
-                kwargs["api_key"] = clean_k
-                if provider == "openrouter":
-                    os.environ["OPENROUTER_API_KEY"] = clean_k
-                    os.environ["OR_API_KEY"] = clean_k
-                    kwargs["extra_headers"] = {
-                        "HTTP-Referer": "https://github.com/Sammir1209/coder-kali",
-                        "X-Title": "Blood-Cipher",
-                    }
-            if api_base:
-                kwargs["api_base"] = api_base
-
-            response = litellm.completion(**kwargs)
-            choice = response.choices[0]
-            raw_content = getattr(choice.message, "content", None) or getattr(choice.message, "reasoning_content", None) or "OK (Conexión establecida)"
-            reply = str(raw_content).strip()
-            console.print(f"[bold green][✓] Test exitoso. Respuesta del modelo:[/bold green] [white]{reply}[/white]")
-            return True
+            else:
+                console.print(f"[bold red][✗] Falló la prueba de conexión:[/bold red] {msg}")
+                console.print("[dim]Verifica tu API Key, saldo disponible o selecciona otro modelo.[/dim]")
+                return False
         except Exception as e:
-            console.print(f"[bold red][✗] Falló la prueba de conexión:[/bold red] {str(e)}")
-            console.print("[dim]Verifica tu API Key, conexión a internet o endpoint de Ollama.[/dim]")
+            console.print(f"[bold red][✗] Error inesperado en la prueba:[/bold red] {str(e)}")
             return False
