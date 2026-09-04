@@ -208,10 +208,16 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
             </div>
 
             <div class="form-group">
-                <label for="model">Modelo de Inteligencia Artificial</label>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <label for="model" style="margin-bottom: 0;">Modelo de Inteligencia Artificial</label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #00e676; cursor: pointer;">
+                        <input type="checkbox" id="filterFree" onchange="renderModelList()" checked style="accent-color: #00e676; cursor: pointer;">
+                        <span>🆓 Solo Modelos Gratuitos (Free Tier)</span>
+                    </label>
+                </div>
                 <input type="text" id="model" placeholder="Selecciona o escribe el modelo" autocomplete="off" list="modelList">
                 <datalist id="modelList"></datalist>
-                <div class="helper">Puedes escribir un modelo personalizado o elegir uno de la lista.</div>
+                <div class="helper" id="modelHelper">Filtrado activo: mostrando modelos sin costo / gratuitos.</div>
             </div>
 
             <div class="btn-group">
@@ -225,6 +231,39 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
     <script>
         const providers = {providers_json};
         const currentCfg = {current_config_json};
+
+        function renderModelList() {{
+            const p = document.getElementById('provider').value;
+            const meta = providers[p] || {{}};
+            const onlyFree = document.getElementById('filterFree').checked;
+
+            const allModels = meta.available_models || [];
+            const freeModels = meta.free_models || allModels.filter(m => m.toLowerCase().includes(':free') || m.toLowerCase().includes('free'));
+
+            const modelsToDisplay = (onlyFree && freeModels.length > 0) ? freeModels : allModels;
+
+            const dataList = document.getElementById('modelList');
+            dataList.innerHTML = '';
+            modelsToDisplay.forEach(m => {{
+                const opt = document.createElement('option');
+                opt.value = m;
+                dataList.appendChild(opt);
+            }});
+
+            const helper = document.getElementById('modelHelper');
+            if (onlyFree && freeModels.length > 0) {{
+                helper.innerText = `Mostrando ${{modelsToDisplay.length}} modelos 100% gratuitos para ${{meta.name || p}}.`;
+                helper.style.color = '#00e676';
+            }} else {{
+                helper.innerText = `Mostrando catálogo completo de ${{modelsToDisplay.length}} modelos disponibles.`;
+                helper.style.color = 'var(--text-muted)';
+            }}
+
+            const modelInput = document.getElementById('model');
+            if (!modelsToDisplay.includes(modelInput.value)) {{
+                modelInput.value = modelsToDisplay[0] || meta.default_model || '';
+            }}
+        }}
 
         function updateProviderFields() {{
             const p = document.getElementById('provider').value;
@@ -244,21 +283,11 @@ def _run_web_config_portal(config_mgr: ConfigManager, port: int = 8999) -> bool:
             const baseInput = document.getElementById('apiBase');
             baseInput.value = currentCfg.api_bases[p] || meta.default_api_base || '';
 
-            // Actualizar Modelos
-            const dataList = document.getElementById('modelList');
-            dataList.innerHTML = '';
-            const models = meta.available_models || [];
-            models.forEach(m => {{
-                const opt = document.createElement('option');
-                opt.value = m;
-                dataList.appendChild(opt);
-            }});
+            renderModelList();
 
             const modelInput = document.getElementById('model');
             if (p === currentCfg.active_provider && currentCfg.active_model) {{
                 modelInput.value = currentCfg.active_model;
-            }} else {{
-                modelInput.value = meta.default_model || models[0] || '';
             }}
         }}
 
@@ -459,17 +488,49 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
                 config_mgr.config["api_bases"][prov] = api_base
                 config_mgr.save()
 
-            # Selección de modelo de los descubiertos
-            model_choices = list(models) if models else list(DEFAULT_PROVIDERS.get(prov, {}).get("available_models", []))
+            # Selección de modelo: ofrecer enrutamiento gratuito
+            free_prov_models = config_mgr.get_free_models(prov)
+            all_discovered = list(models) if models else list(DEFAULT_PROVIDERS.get(prov, {}).get("available_models", []))
+            
+            # Si se descubrieron modelos en vivo y hay modelos gratuitos conocidos
+            discovered_free = [m for m in all_discovered if any(f.split('/')[-1] == m.split('/')[-1] for f in free_prov_models) or ":free" in m.lower() or "free" in m.lower()]
+            if not discovered_free and free_prov_models:
+                discovered_free = list(free_prov_models)
+
+            filter_mode = "ALL"
+            if discovered_free:
+                ask_routing = questionary.select(
+                    "¿Qué tipo de enrutamiento deseas activar para este proveedor?",
+                    choices=[
+                        questionary.Choice(
+                            title=f"🆓 [Enrutamiento Gratuito / Solo Modelos Free] ({len(discovered_free)} modelos sin costo)",
+                            value="FREE"
+                        ),
+                        questionary.Choice(
+                            title=f"🌐 [Ver Todos los Modelos Disponibles] ({len(all_discovered)} modelos)",
+                            value="ALL"
+                        ),
+                    ],
+                    default="FREE"
+                ).ask()
+                if ask_routing:
+                    filter_mode = ask_routing
+
+            if filter_mode == "FREE" and discovered_free:
+                model_choices = list(discovered_free)
+                console.print(f"[bold green][✓] Filtrando solo modelos 100% gratuitos para {prov_name}.[/bold green]")
+            else:
+                model_choices = list(all_discovered)
+
             if not model_choices:
                 model_choices = [det_res.get("default_model") or "deepseek-v3.2"]
 
             model_choices.append("Personalizado (Escribir manualmente)")
             model_choices.append("🔙 Cancelar")
 
-            def_mod = det_res.get("default_model")
-            if def_mod not in model_choices:
-                def_mod = model_choices[0]
+            def_mod = model_choices[0]
+            if det_res.get("default_model") in model_choices:
+                def_mod = det_res.get("default_model")
 
             chosen_m = questionary.select(
                 f"Selecciona el modelo activo para {prov_name}:",
@@ -615,12 +676,36 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
         with console.status(f"[bold cyan]Consultando modelos activos en tiempo real para {prov_meta['name']}...[/bold cyan]", spinner="dots"):
             live_models = fetch_live_models(chosen_provider, api_key=api_key, api_base=api_base)
 
-        if live_models:
-            console.print(f"[bold green][✓] Se detectaron {len(live_models)} modelos activos disponibles en tu cuenta.[/bold green]")
-            model_choices = list(live_models)
+        all_detected = live_models if live_models else list(prov_meta.get("available_models", []))
+        free_models = config_mgr.get_free_models(chosen_provider)
+
+        # Preguntar si desea enrutamiento gratuito exclusivo o ver todos los modelos
+        filter_mode = "ALL"
+        if free_models:
+            free_choice = questionary.select(
+                "¿Qué tipo de enrutamiento deseas utilizar?",
+                choices=[
+                    questionary.Choice(
+                        title=f"🆓 [Solo Modelos Gratuitos / Free Routing] ({len(free_models)} modelos sin costo)",
+                        value="FREE"
+                    ),
+                    questionary.Choice(
+                        title=f"🌐 [Ver Todos los Modelos Disponibles] ({len(all_detected)} modelos en catálogo)",
+                        value="ALL"
+                    ),
+                ],
+                default="FREE"
+            ).ask()
+            if free_choice:
+                filter_mode = free_choice
+
+        if filter_mode == "FREE":
+            model_choices = list(free_models)
+            console.print(f"[bold green][✓] Enrutamiento gratuito activado: Mostrando {len(model_choices)} modelos sin costo para {prov_meta['name']}.[/bold green]")
         else:
-            # Fallback a la lista curada si no fue posible consultar en vivo
-            model_choices = list(prov_meta.get("available_models", []))
+            model_choices = list(all_detected)
+            if live_models:
+                console.print(f"[bold green][✓] Se detectaron {len(live_models)} modelos activos disponibles en tu cuenta.[/bold green]")
 
         model_choices.append("Personalizado (Escribir manualmente)")
         model_choices.append("🔙 Cancelar y Regresar")

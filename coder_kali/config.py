@@ -20,13 +20,17 @@ SECRET_KEY_FILE = CONFIG_DIR / ".secret.key"
 DEFAULT_PROVIDERS = {
     "gemini": {
         "name": "Google Gemini",
-        "default_model": "gemini/gemini-3.6-flash",
+        "default_model": "gemini/gemini-2.5-flash",
         "available_models": [
             "gemini/gemini-3.6-flash",
             "gemini/gemini-2.5-flash",
             "gemini/gemini-2.5-pro",
             "gemini/gemini-1.5-flash",
             "gemini/gemini-1.5-pro",
+        ],
+        "free_models": [
+            "gemini/gemini-2.5-flash",
+            "gemini/gemini-1.5-flash",
         ],
         "env_var": "GEMINI_API_KEY",
         "requires_api_key": True,
@@ -41,12 +45,15 @@ DEFAULT_PROVIDERS = {
             "anthropic/claude-3-sonnet-20240229",
             "anthropic/claude-3-haiku-20240307",
         ],
+        "free_models": [
+            "anthropic/claude-3-5-haiku-20241022",
+        ],
         "env_var": "ANTHROPIC_API_KEY",
         "requires_api_key": True,
     },
     "openai": {
         "name": "OpenAI",
-        "default_model": "openai/gpt-4o",
+        "default_model": "openai/gpt-4o-mini",
         "available_models": [
             "openai/gpt-4o",
             "openai/gpt-4o-mini",
@@ -54,6 +61,10 @@ DEFAULT_PROVIDERS = {
             "openai/o1",
             "openai/o1-mini",
             "openai/gpt-4-turbo",
+            "openai/gpt-3.5-turbo",
+        ],
+        "free_models": [
+            "openai/gpt-4o-mini",
             "openai/gpt-3.5-turbo",
         ],
         "env_var": "OPENAI_API_KEY",
@@ -66,6 +77,10 @@ DEFAULT_PROVIDERS = {
             "deepseek/deepseek-chat",
             "deepseek/deepseek-reasoner",
             "deepseek/deepseek-coder",
+        ],
+        "free_models": [
+            "deepseek/deepseek-chat",
+            "deepseek/deepseek-reasoner",
         ],
         "env_var": "DEEPSEEK_API_KEY",
         "requires_api_key": True,
@@ -82,12 +97,18 @@ DEFAULT_PROVIDERS = {
             "groq/openai/gpt-oss-120b",
             "groq/openai/gpt-oss-20b",
         ],
+        "free_models": [
+            "groq/llama-3.3-70b-versatile",
+            "groq/llama-3.1-8b-instant",
+            "groq/gemma2-9b-it",
+            "groq/mixtral-8x7b-32768",
+        ],
         "env_var": "GROQ_API_KEY",
         "requires_api_key": True,
     },
     "mistral": {
         "name": "Mistral AI",
-        "default_model": "mistral/mistral-large-latest",
+        "default_model": "mistral/mistral-small-latest",
         "available_models": [
             "mistral/mistral-large-latest",
             "mistral/codestral-latest",
@@ -96,15 +117,23 @@ DEFAULT_PROVIDERS = {
             "mistral/open-mistral-nemo",
             "mistral/open-codestral-mamba",
         ],
+        "free_models": [
+            "mistral/open-mistral-nemo",
+            "mistral/open-codestral-mamba",
+            "mistral/mistral-small-latest",
+        ],
         "env_var": "MISTRAL_API_KEY",
         "requires_api_key": True,
     },
     "xai": {
         "name": "xAI (Grok)",
-        "default_model": "xai/grok-2-latest",
+        "default_model": "xai/grok-beta",
         "available_models": [
             "xai/grok-2-latest",
             "xai/grok-2-vision-1212",
+            "xai/grok-beta",
+        ],
+        "free_models": [
             "xai/grok-beta",
         ],
         "env_var": "XAI_API_KEY",
@@ -112,23 +141,30 @@ DEFAULT_PROVIDERS = {
     },
     "cohere": {
         "name": "Cohere",
-        "default_model": "cohere/command-r-plus",
+        "default_model": "cohere/command-r",
         "available_models": [
             "cohere/command-r-plus",
             "cohere/command-r",
             "cohere/command-light",
             "cohere/command",
         ],
+        "free_models": [
+            "cohere/command-light",
+            "cohere/command-r",
+        ],
         "env_var": "COHERE_API_KEY",
         "requires_api_key": True,
     },
     "perplexity": {
         "name": "Perplexity AI",
-        "default_model": "perplexity/sonar-reasoning-pro",
+        "default_model": "perplexity/sonar",
         "available_models": [
             "perplexity/sonar-reasoning-pro",
             "perplexity/sonar-reasoning",
             "perplexity/sonar-pro",
+            "perplexity/sonar",
+        ],
+        "free_models": [
             "perplexity/sonar",
         ],
         "env_var": "PERPLEXITYAI_API_KEY",
@@ -143,22 +179,30 @@ DEFAULT_PROVIDERS = {
             "together_ai/Qwen/Qwen2.5-Coder-32B-Instruct",
             "together_ai/mistralai/Mixtral-8x22B-Instruct-v0.1",
         ],
+        "free_models": [
+            "together_ai/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "together_ai/Qwen/Qwen2.5-Coder-32B-Instruct",
+        ],
         "env_var": "TOGETHERAI_API_KEY",
         "requires_api_key": True,
     },
     "cerebras": {
         "name": "Cerebras (Hardware Especializado)",
-        "default_model": "cerebras/llama3.3-70b",
+        "default_model": "cerebras/llama3.1-8b",
         "available_models": [
             "cerebras/llama3.3-70b",
             "cerebras/llama3.1-8b",
+        ],
+        "free_models": [
+            "cerebras/llama3.1-8b",
+            "cerebras/llama3.3-70b",
         ],
         "env_var": "CEREBRAS_API_KEY",
         "requires_api_key": True,
     },
     "qwen": {
         "name": "Alibaba Qwen (DashScope)",
-        "default_model": "qwen/qwen2.5-coder-32b-instruct",
+        "default_model": "qwen/qwen-turbo",
         "available_models": [
             "qwen/qwen2.5-coder-32b-instruct",
             "qwen/qwen-max",
@@ -166,15 +210,25 @@ DEFAULT_PROVIDERS = {
             "qwen/qwen-turbo",
             "qwen/qwen2.5-72b-instruct",
         ],
+        "free_models": [
+            "qwen/qwen-turbo",
+            "qwen/qwen2.5-coder-32b-instruct",
+        ],
         "env_var": "DASHSCOPE_API_KEY",
         "requires_api_key": True,
     },
     "huggingface": {
         "name": "Hugging Face Serverless",
-        "default_model": "huggingface/meta-llama/Llama-3.3-70B-Instruct",
+        "default_model": "huggingface/deepseek-ai/DeepSeek-R1",
         "available_models": [
-            "huggingface/meta-llama/Llama-3.3-70B-Instruct",
             "huggingface/deepseek-ai/DeepSeek-R1",
+            "huggingface/meta-llama/Llama-3.3-70B-Instruct",
+            "huggingface/Qwen/Qwen2.5-Coder-32B-Instruct",
+            "huggingface/mistralai/Mistral-7B-Instruct-v0.3",
+        ],
+        "free_models": [
+            "huggingface/deepseek-ai/DeepSeek-R1",
+            "huggingface/meta-llama/Llama-3.3-70B-Instruct",
             "huggingface/Qwen/Qwen2.5-Coder-32B-Instruct",
             "huggingface/mistralai/Mistral-7B-Instruct-v0.3",
         ],
@@ -194,13 +248,23 @@ DEFAULT_PROVIDERS = {
             "ollama/codellama",
             "ollama/starcoder2",
         ],
+        "free_models": [
+            "ollama/llama3.3",
+            "ollama/llama3.2",
+            "ollama/deepseek-r1",
+            "ollama/qwen2.5-coder:7b",
+            "ollama/qwen2.5-coder:32b",
+            "ollama/mistral",
+            "ollama/codellama",
+            "ollama/starcoder2",
+        ],
         "env_var": "OLLAMA_API_BASE",
         "requires_api_key": False,
         "default_api_base": "http://localhost:11434",
     },
     "bai": {
         "name": "Bai Chat (chat.b.ai API)",
-        "default_model": "openai/gpt-5.2",
+        "default_model": "openai/deepseek-chat",
         "available_models": [
             "openai/gpt-5.2",
             "openai/gpt-4o",
@@ -210,14 +274,24 @@ DEFAULT_PROVIDERS = {
             "openai/deepseek-chat",
             "openai/deepseek-reasoner",
         ],
+        "free_models": [
+            "openai/deepseek-chat",
+            "openai/deepseek-reasoner",
+            "openai/gpt-4o-mini",
+        ],
         "env_var": "BAI_API_KEY",
         "requires_api_key": True,
         "default_api_base": "https://api.b.ai/v1",
     },
     "openrouter": {
         "name": "OpenRouter (Acceso Universal a 200+ Modelos)",
-        "default_model": "openrouter/deepseek/deepseek-r1",
+        "default_model": "openrouter/deepseek/deepseek-r1:free",
         "available_models": [
+            "openrouter/deepseek/deepseek-r1:free",
+            "openrouter/deepseek/deepseek-chat:free",
+            "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+            "openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
+            "openrouter/google/gemini-2.0-flash-exp:free",
             "openrouter/deepseek/deepseek-r1",
             "openrouter/deepseek/deepseek-chat",
             "openrouter/deepseek/deepseek-r1-distill-llama-70b",
@@ -227,6 +301,13 @@ DEFAULT_PROVIDERS = {
             "openrouter/anthropic/claude-3.5-sonnet",
             "openrouter/openai/gpt-4o",
             "openrouter/google/gemini-2.0-flash-001",
+        ],
+        "free_models": [
+            "openrouter/deepseek/deepseek-r1:free",
+            "openrouter/deepseek/deepseek-chat:free",
+            "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+            "openrouter/qwen/qwen-2.5-coder-32b-instruct:free",
+            "openrouter/google/gemini-2.0-flash-exp:free",
         ],
         "env_var": "OPENROUTER_API_KEY",
         "requires_api_key": True,
@@ -246,6 +327,10 @@ DEFAULT_PROVIDERS = {
             "openai/meta-llama/Llama-3.3-70B-Instruct",
             "openai/Qwen/Qwen2.5-Coder-32B-Instruct",
             "openai/mistralai/Mistral-Large-2407",
+        ],
+        "free_models": [
+            "openai/deepseek-ai/DeepSeek-V3",
+            "openai/gpt-4o-mini",
         ],
         "env_var": "AIMLAPI_API_KEY",
         "requires_api_key": True,
@@ -271,14 +356,25 @@ DEFAULT_PROVIDERS = {
             "gpt-4o-mini",
             "o3-mini",
         ],
+        "free_models": [
+            "deepseek/deepseek-chat",
+            "deepseek/deepseek-reasoner",
+            "deepseek/deepseek-r1-0528",
+            "deepseek/deepseek-v4-flash",
+            "deepseek/deepseek-v4-pro",
+            "deepseek/deepseek-v3.2",
+            "claude-3-5-haiku",
+            "gpt-4o-mini",
+        ],
         "env_var": "PUTER_AUTH_TOKEN",
         "requires_api_key": True,
         "default_api_base": "https://api.puter.com/puterai/openai/v1",
     },
     "bazaarlink": {
         "name": "BazaarLink AI (bazaarlink.ai)",
-        "default_model": "deepseek-v3.2",
+        "default_model": "auto:free",
         "available_models": [
+            "auto:free",
             "deepseek-v3.2",
             "deepseek-v4-flash",
             "deepseek-v4-pro",
@@ -287,6 +383,9 @@ DEFAULT_PROVIDERS = {
             "glm-4.7",
             "kimi-k2.7-code",
             "minimax-m2.7",
+        ],
+        "free_models": [
+            "auto:free",
         ],
         "env_var": "BAZAARLINK_API_KEY",
         "requires_api_key": True,
@@ -518,6 +617,17 @@ class ConfigManager:
             if base.endswith("/chat/completions"):
                 base = base[:-len("/chat/completions")].rstrip("/")
         return base
+
+    def get_free_models(self, provider: Optional[str] = None) -> list:
+        """Retorna la lista de modelos gratuitos disponibles para el proveedor."""
+        prov = provider or self.get_active_provider()
+        prov_info = DEFAULT_PROVIDERS.get(prov, {})
+        free = prov_info.get("free_models", [])
+        if free:
+            return list(free)
+        # Fallback heurístico: buscar modelos con ':free' o 'free' en el nombre
+        all_models = prov_info.get("available_models", [])
+        return [m for m in all_models if ":free" in m.lower() or "free" in m.lower()]
 
     def is_configured(self) -> bool:
         provider = self.get_active_provider()
