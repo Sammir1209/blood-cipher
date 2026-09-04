@@ -251,6 +251,30 @@ DEFAULT_PROVIDERS = {
         "requires_api_key": True,
         "default_api_base": "https://api.aimlapi.com/v1",
     },
+    "puter": {
+        "name": "Puter.js (DeepSeek Ilimitado & 500+ Modelos)",
+        "default_model": "deepseek/deepseek-chat",
+        "available_models": [
+            "deepseek/deepseek-chat",
+            "deepseek/deepseek-reasoner",
+            "deepseek/deepseek-r1-0528",
+            "deepseek/deepseek-v4-flash",
+            "deepseek/deepseek-v4-pro",
+            "deepseek/deepseek-v4-flash-vision-exp",
+            "deepseek/deepseek-v4-pro-0813",
+            "deepseek/deepseek-v4-flash-0731",
+            "deepseek/deepseek-v3.2",
+            "deepseek/deepseek-chat-v3.1",
+            "claude-3-5-sonnet",
+            "claude-3-5-haiku",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "o3-mini",
+        ],
+        "env_var": "PUTER_AUTH_TOKEN",
+        "requires_api_key": True,
+        "default_api_base": "https://api.puter.com/puterai/openai/v1",
+    },
 }
 
 DEFAULT_CONFIG: Dict[str, Any] = {

@@ -10,6 +10,7 @@ from .groq import GroqProvider
 from .ollama import OllamaProvider
 from .aimlapi import AimlApiProvider
 from .openrouter import OpenRouterProvider
+from .puter import PuterProvider
 from .fallback import GenericLLMProvider
 
 PROVIDER_REGISTRY: Dict[str, Type[BaseLLMProvider]] = {
@@ -19,6 +20,7 @@ PROVIDER_REGISTRY: Dict[str, Type[BaseLLMProvider]] = {
     "ollama": OllamaProvider,
     "aimlapi": AimlApiProvider,
     "openrouter": OpenRouterProvider,
+    "puter": PuterProvider,
 }
 
 

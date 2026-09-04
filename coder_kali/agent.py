@@ -328,7 +328,7 @@ class KaliAgent:
                         configured_max = self.config_mgr.get("max_tokens", 4096)
                         if provider == "groq":
                             max_tokens = min(configured_max, 1024)
-                        elif provider in ["bai", "aimlapi", "openai", "anthropic", "openrouter", "gemini"]:
+                        elif provider in ["bai", "aimlapi", "openai", "anthropic", "openrouter", "gemini", "puter"]:
                             max_tokens = max(configured_max, 4096)
                         else:
                             max_tokens = configured_max

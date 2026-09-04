@@ -7,7 +7,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20BlackArch%20%7C%20Arch%20%7C%20Debian%20%7C%20Termux%20(Android)-557C94.svg?style=for-the-badge&logo=linux&logoColor=white)](https://www.kali.org/)
 [![Termux](https://img.shields.io/badge/Android-Termux%20Native%20Supported-00D97E.svg?style=for-the-badge&logo=android&logoColor=white)](https://termux.dev/)
-[![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Bai%20Chat%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
+[![LiteLLM](https://img.shields.io/badge/Multi--LLM-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek%20%7C%20Puter.js%20%7C%20Bai%20Chat%20%7C%20Ollama-8A2BE2.svg?style=for-the-badge)](https://litellm.ai/)
 [![Web UI](https://img.shields.io/badge/Interface-CLI%20%2B%20Web%20Dashboard%20(Port%207777)-00FF9D.svg?style=for-the-badge)](http://localhost:7777)
 
 <p align="center">
@@ -30,7 +30,7 @@
 
 ## [01] Visión General
 
-**Blood-Cipher v2.0** es una plataforma táctica impulsada por IA diseñada para la **comunidad hacktivista, investigadores de ciberinteligencia independiente (OSINT), auditores de infraestructura y defensores de la soberanía digital**. Combina la potencia de modelos de lenguaje de última generación (**Google Gemini, Claude 3.5 Sonnet, OpenAI o1/GPT-4o, DeepSeek R1/V3, Bai Chat, Groq y Ollama 100% Offline**) con el arsenal técnico de **Kali Linux, BlackArch, Arch Linux, Debian y Ubuntu**.
+**Blood-Cipher v2.0** es una plataforma táctica impulsada por IA diseñada para la **comunidad hacktivista, investigadores de ciberinteligencia independiente (OSINT), auditores de infraestructura y defensores de la soberanía digital**. Combina la potencia de modelos de lenguaje de última generación (**Google Gemini, Claude 3.5 Sonnet, OpenAI o1/GPT-4o, DeepSeek R1/V3 vía Puter.js libre, Bai Chat, Groq y Ollama 100% Offline**) con el arsenal técnico de **Kali Linux, BlackArch, Arch Linux, Debian, Ubuntu y Termux**.
 
 Ofrece un centro de mando unificado para operaciones tácticas:
 - **Terminal Táctico (CLI):** Control interactivo PTY, análisis de credenciales y subcomandos de red (`blood-cipher`).
@@ -41,7 +41,7 @@ Ofrece un centro de mando unificado para operaciones tácticas:
 ## [02] Capacidades Principales
 
 ### [›] Inteligencia Artificial Multi-Proveedor
-- Compatible con **OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, OpenRouter** y modelos 100% locales y offline mediante **Ollama**.
+- Compatible con **Puter.js (DeepSeek R1/Chat y 500+ modelos gratuitos), OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, OpenRouter** y modelos 100% locales y offline mediante **Ollama**.
 - Detección automática y conmutación ágil de modelos en caliente.
 
 ### [›] Modo Planificación Táctico (Planning Mode)
