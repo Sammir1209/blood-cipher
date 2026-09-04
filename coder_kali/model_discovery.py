@@ -133,6 +133,16 @@ def fetch_live_models(provider: str, api_key: str, api_base: Optional[str] = Non
                 if models:
                     return sorted(models)
 
+        # 11. BAZAARLINK (bazaarlink.ai)
+        elif provider == "bazaarlink":
+            base = (api_base or "https://bazaarlink.ai/api/v1").rstrip("/")
+            req = urllib.request.Request(f"{base}/models", headers=headers)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                models = [item["id"] for item in data.get("data", [])]
+                if models:
+                    return sorted(models)
+
     except Exception:
         pass
 

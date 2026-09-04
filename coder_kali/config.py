@@ -275,6 +275,23 @@ DEFAULT_PROVIDERS = {
         "requires_api_key": True,
         "default_api_base": "https://api.puter.com/puterai/openai/v1",
     },
+    "bazaarlink": {
+        "name": "BazaarLink AI (bazaarlink.ai)",
+        "default_model": "deepseek-v3.2",
+        "available_models": [
+            "deepseek-v3.2",
+            "deepseek-v4-flash",
+            "deepseek-v4-pro",
+            "qwen3.8-max",
+            "glm-5.1",
+            "glm-4.7",
+            "kimi-k2.7-code",
+            "minimax-m2.7",
+        ],
+        "env_var": "BAZAARLINK_API_KEY",
+        "requires_api_key": True,
+        "default_api_base": "https://bazaarlink.ai/api/v1",
+    },
 }
 
 DEFAULT_CONFIG: Dict[str, Any] = {

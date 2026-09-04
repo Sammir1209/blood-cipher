@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.prompt import Confirm
 from coder_kali.config import ConfigManager, DEFAULT_PROVIDERS
 from coder_kali.model_discovery import fetch_live_models
+from coder_kali.key_detector import detect_provider_and_models
 
 console = Console()
 
@@ -399,26 +400,100 @@ def interactive_config_wizard(config_mgr: ConfigManager) -> bool:
         )
     )
 
-    # Preguntar si prefiere Asistente Web o Asistente CLI
+    # Preguntar si prefiere Auto-Detección, Asistente Web o Asistente CLI
     mode_choice = questionary.select(
         "¿Cómo prefieres configurar Blood-Cipher?",
         choices=[
+            questionary.Choice(
+                title="⚡ [Auto-Detectar por Token/API Key] (Pega tu clave: detecta el proveedor y modelos automáticamente)",
+                value="AUTO"
+            ),
             questionary.Choice(
                 title="🌐 [Configurador Web Visual] (Abre tu navegador, pega tu API Key y elige modelos fácilmente)",
                 value="WEB"
             ),
             questionary.Choice(
-                title="💻 [Configurador por Terminal / CLI] (Paso a paso en esta consola)",
+                title="💻 [Configurador por Terminal / CLI Manual] (Elegir proveedor paso a paso)",
                 value="CLI"
             ),
             questionary.Choice(title="🔙 Regresar / Cancelar", value="BACK"),
         ],
-        default="WEB"
+        default="AUTO"
     ).ask()
 
     if not mode_choice or mode_choice == "BACK":
         console.print("[yellow][*] Regresando al menú anterior.[/yellow]")
         return False
+
+    if mode_choice == "AUTO":
+        entered_key = questionary.text(
+            "Pega tu API Key o Auth Token (ej. sk-bl-..., hf_..., gsk_..., AIzaSy..., sk-...):"
+        ).ask()
+        if not entered_key or not entered_key.strip():
+            console.print("[yellow][*] Operación cancelada.[/yellow]")
+            return False
+
+        entered_key = entered_key.strip()
+        with console.status("[bold cyan]Analizando firma de clave y consultando servidores de IA en tiempo real...[/bold cyan]", spinner="dots"):
+            det_res = detect_provider_and_models(entered_key)
+
+        if not det_res.get("success") or not det_res.get("provider"):
+            console.print(f"[yellow][!] {det_res.get('message', 'No se pudo identificar el proveedor automáticamente.')}[/yellow]")
+            console.print("[dim]Continuando al asistente manual paso a paso...[/dim]")
+        else:
+            prov = det_res["provider"]
+            prov_name = det_res["name"]
+            models = det_res.get("models", [])
+            api_base = det_res.get("api_base", "")
+
+            console.print()
+            console.print(f"[bold green][✓] ¡Proveedor identificado con éxito![/bold green] [bold white]{prov_name}[/bold white] (`{prov}`)")
+            if models:
+                console.print(f"[bold green][✓] Se descubrieron {len(models)} modelos disponibles en tu cuenta.[/bold green]")
+
+            # Guardar la API Key y API Base descubierta
+            config_mgr.set_api_key(prov, entered_key)
+            if api_base:
+                if "api_bases" not in config_mgr.config:
+                    config_mgr.config["api_bases"] = {}
+                config_mgr.config["api_bases"][prov] = api_base
+                config_mgr.save()
+
+            # Selección de modelo de los descubiertos
+            model_choices = list(models) if models else list(DEFAULT_PROVIDERS.get(prov, {}).get("available_models", []))
+            if not model_choices:
+                model_choices = [det_res.get("default_model") or "deepseek-v3.2"]
+
+            model_choices.append("Personalizado (Escribir manualmente)")
+            model_choices.append("🔙 Cancelar")
+
+            def_mod = det_res.get("default_model")
+            if def_mod not in model_choices:
+                def_mod = model_choices[0]
+
+            chosen_m = questionary.select(
+                f"Selecciona el modelo activo para {prov_name}:",
+                choices=model_choices,
+                default=def_mod
+            ).ask()
+
+            if not chosen_m or chosen_m.startswith("🔙"):
+                return False
+
+            if chosen_m.startswith("Personalizado"):
+                manual_m = questionary.text("Ingresa el identificador del modelo:").ask()
+                if manual_m and manual_m.strip():
+                    chosen_m = manual_m.strip()
+                else:
+                    chosen_m = def_mod
+
+            config_mgr.set_provider(prov, chosen_m)
+            console.print(f"[bold green][✓] ¡Configuración completada y activa![/bold green] [cyan]{prov.upper()}[/cyan] → [yellow]{chosen_m}[/yellow]")
+
+            test_now = questionary.confirm("¿Deseas realizar un test de conexión ahora?", default=True).ask()
+            if test_now:
+                test_provider_connection(config_mgr)
+            return True
 
     if mode_choice == "WEB":
         return _run_web_config_portal(config_mgr)

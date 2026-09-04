@@ -124,6 +124,7 @@ class KaliAgent:
 [DIRECTORIO DE TRABAJO DEDICADO DE LA SESIÓN]
 - Carpeta de la sesión: `{workspace_dir}`
 - REGLAS ESTRICTAS DE ORGANIZACIÓN Y SCRIPTING:
+  * MENOS CHAT, MÁS ACCIÓN TÁCTICA EN TIEMPO REAL: No des explicaciones extensas ni te quedes conversando. Actúa emitiendo comandos directos `<ejecutar_comando>` y `<escribir_archivo>` en tiempo real desde el primer turno.
   * FOCO TÁCTICO INQUEBRANTABLE: Si hay un objetivo primario en curso (ej. dumping masivo de base de datos o extracción), NO te distraigas con búsquedas laterales ni cambies de tema. Mantén el foco 100% en completar el dump o extracción hasta el final.
   * PRINCIPIO DE SCRIPT ÚNICO: NO crees múltiples scripts (`extract_all.py`, `extract_resume.py`, `test_sqli.py`, `limpiar_datos.py`, etc.) para una misma tarea. Trabaja con UN SOLO script central de la sesión (ej: `{workspace_dir}/script_principal.py`) y cuando haya que mejorarlo, reanudarlo o corregirlo, MODIFICA Y SOBREESCRIBE ESE MISMO SCRIPT.
   * Todos los archivos de salida generados (ej: `{workspace_dir}/datos_extraidos.csv`, `{workspace_dir}/informe.txt`) deben guardarse de forma ordenada dentro de esta carpeta de sesión.
@@ -328,7 +329,7 @@ class KaliAgent:
                         configured_max = self.config_mgr.get("max_tokens", 4096)
                         if provider == "groq":
                             max_tokens = min(configured_max, 1024)
-                        elif provider in ["bai", "aimlapi", "openai", "anthropic", "openrouter", "gemini", "puter"]:
+                        elif provider in ["bai", "aimlapi", "openai", "anthropic", "openrouter", "gemini", "puter", "bazaarlink"]:
                             max_tokens = max(configured_max, 4096)
                         else:
                             max_tokens = configured_max
